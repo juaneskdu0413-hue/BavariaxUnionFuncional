@@ -40,10 +40,18 @@ function restaurarSesion() {
   try {
     const raw = sessionStorage.getItem(SESION_KEY);
     if (raw) {
-      sesion = JSON.parse(raw);
-      entrarConSesion();
+      const datos = JSON.parse(raw);
+      // Validar que el rol sea uno de los permitidos
+      if (datos.rol === 'conductor' || datos.rol === 'admin') {
+        sesion = datos;
+        entrarConSesion();
+      } else {
+        sessionStorage.removeItem(SESION_KEY);
+      }
     }
-  } catch (e) { /* sin sesión previa */ }
+  } catch (e) {
+    sessionStorage.removeItem(SESION_KEY);
+  }
 }
 
 function inicializarLogin() {
@@ -330,10 +338,18 @@ async function limpiarTodo() {
 // NAVEGACIÓN ENTRE VISTAS
 // ════════════════════════════════════════════════════════
 function cambiarVista(vista) {
+  // Seguridad: conductores nunca pueden llegar al panel
+  if (vista === 'panel' && sesion && sesion.rol !== 'admin') return;
+
   document.querySelectorAll('.vista').forEach(el => el.classList.remove('activa'));
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('activo'));
-  document.getElementById('vista-' + vista).classList.add('activa');
-  document.getElementById('tab-' + vista).classList.add('activo');
+
+  const vistaEl = document.getElementById('vista-' + vista);
+  const tabEl   = document.getElementById('tab-' + vista);
+
+  if (vistaEl) vistaEl.classList.add('activa');
+  if (tabEl)   tabEl.classList.add('activo');
+
   if (vista === 'panel') cargarYRenderPanel();
 }
 
