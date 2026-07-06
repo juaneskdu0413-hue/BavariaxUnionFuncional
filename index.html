@@ -3,88 +3,141 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="format-detection" content="telephone=no">
-<meta name="format-detection" content="address=no">
-<meta name="format-detection" content="email=no">
-<title>Check-in de Conductores — Operación BavariaxUnionAndina</title>
+<title>BavariaxUnionAndina — Registro de Jornada</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<!-- ═══════ TOPBAR ═══════ -->
 <div class="topbar">
-  <div class="topbar-marca">Operación <span>BavariaxUnionAndina</span> — Check-in</div>
+
+  <!-- Logo Bavaria izquierda -->
+  <div class="topbar-logo-left">
+    <img src="/images/BavariaImagen.png" alt="Bavaria" style="height:42px;width:auto;">
+  </div>
+
+  <!-- Centro: BavariaxUnionAndina -->
+  <div class="topbar-center">
+    <span class="topbar-marca-text">
+      <span class="marca-bavaria">Bavaria</span><span class="marca-x">×</span><span class="marca-ua">UnionAndina</span>
+    </span>
+    <span class="topbar-marca-sub">Operación · Registro de Jornada</span>
+  </div>
+
+  <!-- Logo Unión Andina derecha -->
+  <div class="topbar-logo-right">
+    <img src="/images/UnionAndina_images.jpg" alt="Unión Andina" style="height:42px;width:auto;">
+  </div>
+
+  <!-- Tabs (se muestran tras login) -->
   <div class="tabs" id="tabs-nav" style="display:none;">
     <button class="tab-btn activo" id="tab-conductor">Conductor</button>
-    <button class="tab-btn" id="tab-panel" style="display:none;">Panel Coordinación</button>
-    <button class="tab-btn" id="tab-salir" style="color:#999;">Salir</button>
+    <button class="tab-btn" id="tab-panel" style="display:none;">Panel</button>
+    <button class="tab-btn" id="tab-salir" style="color:#555;">Salir</button>
   </div>
-</div>
 
-<!-- ═══════ VISTA LOGIN ═══════ -->
+</div><!-- /topbar -->
+
+
+      <!-- Cinta amarilla — hoja opuesta entrelazada -->
+      <path d="M19 8 C23 2 31 1 36 5 C41 9 40 19 36 27
+               C32 33 26 38 23 43 C21 47 19 47 17 45
+               C17 41 20 35 23 28 C26 20 25 13 19 8Z"
+            fill="#F5A800"/>
+      <!-- "unión" en verde -->
+      <text x="48" y="22" font-family="Arial,Helvetica,sans-serif" font-weight="800"
+            font-size="16" fill="#3A9B35">unión</text>
+      <!-- "andina" en amarillo/naranja -->
+      <text x="48" y="41" font-family="Arial,Helvetica,sans-serif" font-weight="800"
+            font-size="16" fill="#F5A800">andina</text>
+    </svg>
+  </div>
+
+  <!-- Tabs (se muestran tras login) -->
+  <div class="tabs" id="tabs-nav" style="display:none;">
+    <button class="tab-btn activo" id="tab-conductor">Conductor</button>
+    <button class="tab-btn" id="tab-panel" style="display:none;">Panel</button>
+    <button class="tab-btn" id="tab-salir" style="color:#555;">Salir</button>
+  </div>
+
+</div><!-- /topbar -->
+
+
+<!-- ═══════ VISTA LOGIN ═══════
+     Fondo: imagen Bavaria×UnionAndina con overlay
+═════════════════════════════════ -->
 <div id="vista-login" class="vista activa">
-  <div class="inner" style="max-width:420px;">
-    <div class="titulo-conductor">Identifícate</div>
-    <div class="sub-conductor">Selecciona quién eres para continuar</div>
 
+  <div class="vista-header">
+    <div class="titulo-conductor">Identifícate</div>
+    <div class="sub-conductor">Selecciona tu nombre para registrar tu jornada</div>
+  </div>
+
+  <div class="inner">
     <div class="form-card">
       <label class="form-lbl">¿Quién eres?</label>
-      <div class="chip-grupo" id="chips-identidad" style="margin-bottom:16px;flex-direction:column;">
-        <div class="chip-opcion" data-rol="conductor" data-val="CARLOS MARIO GÁMEZ" data-placa="JVK031" style="width:100%;">
-          CARLOS MARIO GÁMEZ
-          <div class="chip-sub">CC 1003376142 — Conductor</div>
-        </div>
-        <div class="chip-opcion" data-rol="conductor" data-val="DEIBIS RAFAEL PADILLA" data-placa="JVK142" style="width:100%;">
-          DEIBIS RAFAEL PADILLA
-          <div class="chip-sub">CC 8498966 — Conductor</div>
-        </div>
-       <div class="chip-opcion" data-rol="conductor" data-val="OSCAR ANDRES VASQUEZ" data-placa="JVK595" style="width:100%;">
-          OSCAR ANDRES VASQUEZ
-          <div class="chip-sub">CC 1015422543 — Conductor</div>
-        </div>
-        <div class="chip-opcion" data-rol="conductor" data-val="FREDY SANTANA ACUÑA" data-placa="JVK594" style="width:100%;">
-          FREDY SANTANA ACUÑA
-          <div class="chip-sub">CC 1024483571 — Conductor</div>
-        </div>
-         <div class="chip-opcion" data-rol="conductor" data-val="JOSE EDGARDO HERNANDEZ CRUZ " data-placa="JVK129" style="width:100%;">
-          JOSE EDGARDO HERNANDEZ CRUZ 
-          <div class="chip-sub">CC 79750999 — Conductor</div>
-        </div>
-         <div class="chip-opcion" data-rol="conductor" data-val="WALTER YESID PACHON RODRIGUEZ" data-placa="JVK128" style="width:100%;">
-          WALTER YESID PACHON RODRIGUEZ
-          <div class="chip-sub">CC 1104698940 — Conductor</div>
-        </div>
-        <div class="chip-opcion" data-rol="admin" data-val="ADMIN" style="width:100%;">
-          Coordinación / Admin
-          <div class="chip-sub">Requiere clave</div>
-        </div>
-      </div>
+      <div class="chip-grupo" id="chips-identidad">
 
-      <div id="admin-clave-box" style="display:none;margin-bottom:14px;">
-        <label class="form-lbl">Clave de admin</label>
-        <input type="password" id="admin-clave" class="form-textarea" style="min-height:auto;height:42px;" placeholder="Ingresa la clave">
-        <div class="gps-err vis" id="login-err" style="display:none;"></div>
+        <div class="chip-opcion" data-rol="conductor" data-val="CARLOS MARIO GÁMEZ" data-placa="JVK031">
+          Carlos Mario Gámez
+          <div class="chip-sub">CC 1003376142 · Placa JVK031</div>
+        </div>
+        <div class="chip-opcion" data-rol="conductor" data-val="DEIBIS RAFAEL PADILLA" data-placa="JVK142">
+          Deibis Rafael Padilla
+          <div class="chip-sub">CC 8498966 · Placa JVK142</div>
+        </div>
+        <div class="chip-opcion" data-rol="conductor" data-val="OSCAR ANDRES VASQUEZ" data-placa="JVK595">
+          Oscar Andrés Vásquez
+          <div class="chip-sub">CC 1015422543 · Placa JVK595</div>
+        </div>
+        <div class="chip-opcion" data-rol="conductor" data-val="FREDY SANTANA ACUÑA" data-placa="JVK594">
+          Fredy Santana Acuña
+          <div class="chip-sub">CC 1024483571 · Placa JVK594</div>
+        </div>
+        <div class="chip-opcion" data-rol="conductor" data-val="JOSE EDGARDO HERNANDEZ CRUZ" data-placa="JVK129">
+          Jose Edgardo Hernández Cruz
+          <div class="chip-sub">CC 79750999 · Placa JVK129</div>
+        </div>
+        <div class="chip-opcion" data-rol="conductor" data-val="WALTER YESID PACHON RODRIGUEZ" data-placa="JVK128">
+          Walter Yesid Pachón Rodríguez
+          <div class="chip-sub">CC 1104698940 · Placa JVK128</div>
+        </div>
+        <div class="chip-opcion" data-rol="admin" data-val="ADMIN">
+          Coordinación / Admin
+          <div class="chip-sub">Requiere clave de acceso</div>
+        </div>
+
+      </div><!-- /chips-identidad -->
+
+      <div id="admin-clave-box" style="display:none;margin-top:16px;">
+        <label class="form-lbl">Clave de acceso</label>
+        <input type="password" id="admin-clave" placeholder="Ingresa la clave">
+        <div class="gps-err" id="login-err" style="display:none;"></div>
       </div>
-    </div>
+    </div><!-- /form-card -->
 
     <button class="btn-enviar" id="btn-login">Entrar</button>
   </div>
-</div>
+
+</div><!-- /vista-login -->
+
 
 <!-- ═══════ VISTA CONDUCTOR ═══════ -->
 <div id="vista-conductor" class="vista">
-  <div class="inner">
+  <div class="vista-header">
     <div class="titulo-conductor">Registro de jornada</div>
     <div class="sub-conductor">Confirma tu ubicación en cada parada importante</div>
-
+  </div>
+  <div class="inner">
     <div class="form-card">
       <label class="form-lbl">Conductor</label>
-      <div id="conductor-fijo" style="background:var(--blanco);border:1px solid var(--gris-linea);padding:12px 14px;margin-bottom:16px;font-weight:600;"></div>
+      <div id="conductor-fijo"></div>
 
       <label class="form-lbl">Vehículo</label>
-      <div id="placa-fija" style="background:var(--blanco);border:1px solid var(--gris-linea);padding:12px 14px;margin-bottom:16px;font-family:'IBM Plex Mono',monospace;"></div>
+      <div id="placa-fija"></div>
 
       <label class="form-lbl">Tipo de registro</label>
-      <div class="chip-grupo" id="chips-tipo" style="margin-bottom:16px;">
+      <div class="chip-grupo" id="chips-tipo" style="margin-bottom:18px;">
         <div class="chip-opcion" data-val="Inicio jornada">Inicio jornada</div>
         <div class="chip-opcion" data-val="Llegada a parada">Llegada a parada</div>
         <div class="chip-opcion" data-val="Salida de parada">Salida de parada</div>
@@ -92,7 +145,7 @@
       </div>
 
       <label class="form-lbl">Ubicación (GPS)</label>
-      <div class="gps-box" style="margin-bottom:16px;">
+      <div class="gps-box">
         <div class="gps-icono">📍</div>
         <div class="gps-estado" id="gps-estado">Toca el botón para capturar tu ubicación</div>
         <div class="gps-coords" id="gps-coords"></div>
@@ -101,7 +154,8 @@
       </div>
 
       <label class="form-lbl">Nota / lugar (obligatorio)</label>
-      <textarea class="form-textarea" id="nota" placeholder="Ej: Llegada a puerto, contenedor MSNU2867900 — Cartagena"></textarea>
+      <textarea class="form-textarea" id="nota"
+        placeholder="Ej: Llegada a puerto, contenedor MSNU2867900 — Cartagena"></textarea>
     </div>
 
     <button class="btn-enviar" id="btn-enviar">Confirmar registro</button>
@@ -114,12 +168,17 @@
   </div>
 </div>
 
+
 <!-- ═══════ VISTA PANEL ═══════ -->
 <div id="vista-panel" class="vista">
-  <div class="inner">
+  <div class="vista-header">
+    <div class="titulo-conductor">Panel de Coordinación</div>
+    <div class="sub-conductor">Registros de jornada — conductores activos</div>
+  </div>
+  <div class="inner panel-inner">
     <div class="panel-hd">
       <div class="panel-titulo">Registros de hoy</div>
-      <div style="display:flex;gap:10px;align-items:center;">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <div class="estado-conexion"><div class="dot-conexion"></div>Este dispositivo</div>
         <div class="panel-fecha" id="panel-fecha"></div>
         <button class="btn-refrescar" id="btn-refrescar">Actualizar</button>
@@ -133,14 +192,25 @@
     </div>
 
     <div class="resumen-grid">
-      <div class="resumen-card"><div class="resumen-lbl">Registros hoy</div><div class="resumen-val naranja" id="r-total">0</div></div>
-      <div class="resumen-card"><div class="resumen-lbl">Con GPS</div><div class="resumen-val verde" id="r-gps">0</div></div>
-      <div class="resumen-card"><div class="resumen-lbl">Sin GPS</div><div class="resumen-val rojo" id="r-sin-gps">0</div></div>
-      <div class="resumen-card"><div class="resumen-lbl">Conductores activos</div><div class="resumen-val" id="r-conductores">0</div></div>
+      <div class="resumen-card rc-1">
+        <div class="resumen-lbl">Registros hoy</div>
+        <div class="resumen-val naranja" id="r-total">0</div>
+      </div>
+      <div class="resumen-card rc-2">
+        <div class="resumen-lbl">Con GPS</div>
+        <div class="resumen-val verde" id="r-gps">0</div>
+      </div>
+      <div class="resumen-card rc-3">
+        <div class="resumen-lbl">Sin GPS</div>
+        <div class="resumen-val rojo" id="r-sin-gps">0</div>
+      </div>
+      <div class="resumen-card rc-4">
+        <div class="resumen-lbl">Conductores activos</div>
+        <div class="resumen-val" id="r-conductores">0</div>
+      </div>
     </div>
 
     <div class="filtro-row" id="filtros"></div>
-
     <div class="reg-lista" id="reg-lista"></div>
   </div>
 </div>
