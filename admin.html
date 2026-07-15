@@ -1,0 +1,1900 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Administración — BavariaxUnionAndina</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --dark:    #1a1a2e;
+  --dark2:   #2d2d4e;
+  --red:     #E30613;
+  --red-dk:  #b80010;
+  --green2:  #2e7d32;
+  --green-lt:#e8f5e9;
+  --yellow:  #F5A621;
+  --yellow-lt:#fff8e1;
+  --bg:      #f5f5f5;
+  --white:   #ffffff;
+  --border:  #e0e0e0;
+  --text:    #1a1a2e;
+  --muted:   #888;
+}
+
+body {
+  background: var(--bg);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ══════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════ */
+.admin-header {
+  background: var(--dark);
+  color: #fff;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 68px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.35);
+}
+
+/* Logos laterales */
+.hdr-logo {
+  height: 34px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: block;
+}
+
+/* Bavaria: fondo blanco propio → píldora blanca sobre el header oscuro */
+.hdr-logo-bavaria-wrap {
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Unión Andina: colores propios, sin contenedor */
+.hdr-logo-ua {
+  height: 38px;
+}
+
+/* Divisor vertical */
+.hdr-divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(255,255,255,0.2);
+  flex-shrink: 0;
+}
+
+/* Centro */
+.hdr-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.hdr-brand {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+.hdr-brand .b-bavaria { color: var(--red); }
+.hdr-brand .b-x       { color: rgba(255,255,255,0.4); margin: 0 3px; }
+.hdr-brand .b-ua      { color: #fff; }
+.hdr-title {
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Badge ADMIN — inline dentro del título */
+.hdr-badge {
+  background: var(--red);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+/* Fecha */
+.hdr-fecha {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  flex-shrink: 0;
+  display: none;
+  white-space: nowrap;
+}
+@media (min-width: 640px) { .hdr-fecha { display: block; } }
+
+/* Ocultar logos laterales en pantallas muy pequeñas */
+@media (max-width: 440px) {
+  .hdr-logo, .hdr-divider { display: none; }
+}
+
+/* ══════════════════════════════════════════
+   TAB NAV
+══════════════════════════════════════════ */
+.tab-nav {
+  background: var(--white);
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  position: sticky;
+  top: 68px;
+  z-index: 40;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 14px 16px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.tab-btn svg { flex-shrink: 0; }
+.tab-btn:hover { color: var(--dark); }
+.tab-btn.activo { color: var(--red); border-bottom-color: var(--red); }
+
+/* ══════════════════════════════════════════
+   SECCIONES
+══════════════════════════════════════════ */
+.seccion { display: none; padding: 24px 16px 48px; max-width: 1140px; margin: 0 auto; }
+.seccion.activo { display: block; }
+
+/* ══════════════════════════════════════════
+   BOTONES GENERALES
+══════════════════════════════════════════ */
+.btn {
+  padding: 9px 18px;
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.btn:hover  { opacity: 0.88; }
+.btn:active { transform: scale(0.97); }
+.btn-red    { background: var(--red);   color: #fff; }
+.btn-dark   { background: var(--dark);  color: #fff; }
+.btn-green  { background: var(--green2);color: #fff; }
+.btn-outline {
+  background: var(--white);
+  color: var(--dark);
+  border: 1.5px solid var(--border);
+}
+.btn-outline.activo { background: var(--red); color: #fff; border-color: var(--red); }
+
+/* ══════════════════════════════════════════
+   TOOLBAR / FILTROS
+══════════════════════════════════════════ */
+.toolbar    { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.filtros-row{ display: flex; gap: 8px;  flex-wrap: wrap; margin-bottom: 20px; }
+
+/* ══════════════════════════════════════════
+   CARGA / SIN DATOS
+══════════════════════════════════════════ */
+.estado-carga {
+  text-align: center; padding: 60px 20px;
+  color: var(--muted); font-size: 15px;
+}
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #eee;
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.sin-registros {
+  text-align: center; padding: 60px 20px;
+  color: #aaa; font-size: 16px;
+}
+
+/* ══════════════════════════════════════════
+   GRID DE TARJETAS
+══════════════════════════════════════════ */
+.tarjetas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+/* ══════════════════════════════════════════
+   TARJETA CONDUCTOR
+══════════════════════════════════════════ */
+.tarjeta {
+  background: var(--white);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.tarjeta-cabecera {
+  background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
+  color: #fff;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.tarjeta-nombre { font-size: 14px; font-weight: 700; line-height: 1.3; max-width: 200px; }
+.tarjeta-placa {
+  background: var(--red);
+  color: #fff;
+  font-size: 13px; font-weight: 800;
+  font-family: 'Courier New', monospace;
+  padding: 4px 10px; border-radius: 6px;
+  letter-spacing: 1px; white-space: nowrap;
+}
+.tarjeta-resumen { display: flex; border-bottom: 1px solid #f0f0f0; }
+.resumen-item {
+  flex: 1; padding: 12px 14px; text-align: center;
+  border-right: 1px solid #f0f0f0;
+}
+.resumen-item:last-child { border-right: none; }
+.resumen-item-val {
+  font-size: 18px; font-weight: 800; color: var(--dark);
+  line-height: 1; margin-bottom: 3px;
+}
+.resumen-item-val.verde  { color: var(--green2); }
+.resumen-item-val.rojo   { color: var(--red); }
+.resumen-item-val.naranja{ color: var(--yellow); }
+.resumen-item-lbl { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Timeline */
+.timeline { padding: 16px 20px; display: flex; flex-direction: column; }
+.tl-evento { display: flex; gap: 14px; position: relative; padding-bottom: 16px; }
+.tl-evento:last-child { padding-bottom: 0; }
+.tl-evento:not(:last-child)::after {
+  content: ''; position: absolute;
+  left: 13px; top: 28px; bottom: 0;
+  width: 2px; background: #f0f0f0;
+}
+.tl-icono {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0; position: relative; z-index: 1;
+}
+.tl-icono.inicio  { background: var(--green-lt); }
+.tl-icono.llegada { background: #dbeafe; }
+.tl-icono.salida  { background: var(--yellow-lt); }
+.tl-icono.fin     { background: #fee2e2; }
+.tl-icono.otro    { background: #f3e8ff; }
+.tl-contenido { flex: 1; min-width: 0; }
+.tl-tipo { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+.tl-tipo.inicio  { color: var(--green2); }
+.tl-tipo.llegada { color: #2563eb; }
+.tl-tipo.salida  { color: #d97706; }
+.tl-tipo.fin     { color: var(--red); }
+.tl-tipo.otro    { color: #7c3aed; }
+.tl-hora { font-size: 15px; font-weight: 800; color: var(--dark); margin-bottom: 2px; }
+.tl-nota { font-size: 12px; color: #555; line-height: 1.4; word-break: break-word; }
+.tl-gps  { font-size: 11px; color: var(--green2); margin-top: 2px; }
+
+/* Botón WhatsApp individual */
+.btn-whatsapp {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: calc(100% - 40px); margin: 0 20px 14px;
+  padding: 10px 16px;
+  background: #25d366; color: #fff;
+  border: none; border-radius: 10px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.btn-whatsapp:hover  { background: #1ebe5d; }
+.btn-whatsapp:active { transform: scale(0.97); }
+.btn-whatsapp.copiado { background: var(--green2); }
+
+/* Pie de tarjeta */
+.tarjeta-pie {
+  padding: 10px 20px; background: #fafafa;
+  border-top: 1px solid #f0f0f0;
+  font-size: 11px; color: #aaa;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.tarjeta-pie-badge { display: flex; gap: 6px; }
+.badge { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+.badge-completa { background: var(--green-lt); color: var(--green2); }
+.badge-parcial  { background: var(--yellow-lt); color: #7a4f00; }
+.badge-sin-fin  { background: #fee2e2; color: #991b1b; }
+
+/* Conductor inactivo */
+.conductor-inactivo {
+  background: var(--white); border-radius: 16px; padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  display: flex; align-items: center; gap: 14px; opacity: 0.55;
+}
+.inactivo-icono {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #f0f0f0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.inactivo-nombre { font-size: 13px; font-weight: 700; }
+.inactivo-placa  { font-size: 12px; color: #999; }
+
+/* ══════════════════════════════════════════
+   SECCIÓN HISTORIAL
+══════════════════════════════════════════ */
+.hist-panel {
+  background: var(--white); border-radius: 14px;
+  padding: 18px 20px; margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.hist-grupo { margin-bottom: 16px; }
+.hist-grupo:last-child { margin-bottom: 0; }
+.hist-grupo-label {
+  font-size: 10px; font-weight: 700; color: #bbb;
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;
+}
+.hist-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.hist-chip {
+  padding: 5px 13px; border: 1.5px solid var(--border); border-radius: 20px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  background: var(--white); color: #555; transition: all 0.15s;
+}
+.hist-chip:hover { border-color: var(--dark); color: var(--dark); }
+.hist-chip.activo { background: var(--dark); color: #fff; border-color: var(--dark); }
+
+.hist-fecha-row { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+.hist-quick {
+  padding: 5px 12px; border: 1.5px solid var(--border); border-radius: 20px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  background: var(--white); color: #555; transition: all 0.15s;
+}
+.hist-quick:hover  { border-color: var(--red); color: var(--red); }
+.hist-quick.activo { background: var(--red); color: #fff; border-color: var(--red); }
+
+.hist-date-input {
+  padding: 5px 10px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 13px; color: var(--dark); background: var(--white);
+  cursor: pointer; font-family: inherit;
+}
+.hist-date-input:focus { outline: none; border-color: var(--red); }
+.hist-sep { color: #ccc; font-size: 13px; }
+.hist-orden-btn {
+  margin-left: auto; padding: 5px 13px;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  background: var(--white); color: #555;
+  transition: all 0.15s; white-space: nowrap;
+}
+.hist-orden-btn:hover { border-color: var(--dark); color: var(--dark); }
+
+/* Resultados historial */
+.hist-meta-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.hist-contador { font-size: 12px; color: #aaa; }
+.hist-lista { display: flex; flex-direction: column; gap: 7px; }
+
+.hist-fila {
+  background: var(--white); border-radius: 12px; padding: 13px 16px;
+  display: grid; grid-template-columns: 38px 1fr auto;
+  gap: 12px; align-items: start;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06); transition: box-shadow 0.15s;
+}
+.hist-fila:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+
+.hist-fila-icono {
+  width: 38px; height: 38px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; flex-shrink: 0;
+}
+.hist-fila-icono.inicio  { background: var(--green-lt); }
+.hist-fila-icono.llegada { background: #dbeafe; }
+.hist-fila-icono.salida  { background: var(--yellow-lt); }
+.hist-fila-icono.fin     { background: #fee2e2; }
+.hist-fila-icono.otro    { background: #f3e8ff; }
+
+.hist-fila-cuerpo { min-width: 0; }
+.hist-fila-tipo {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;
+}
+.hist-fila-tipo.inicio  { color: var(--green2); }
+.hist-fila-tipo.llegada { color: #2563eb; }
+.hist-fila-tipo.salida  { color: #d97706; }
+.hist-fila-tipo.fin     { color: var(--red); }
+.hist-fila-tipo.otro    { color: #7c3aed; }
+
+.hist-fila-conductor {
+  font-size: 13px; font-weight: 700; color: var(--dark);
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 3px;
+}
+.hist-fila-placa {
+  font-family: 'Courier New', monospace; font-size: 11px; font-weight: 800;
+  background: var(--dark); color: #fff; padding: 1px 7px; border-radius: 4px;
+}
+.hist-fila-nota { font-size: 12px; color: #666; line-height: 1.4; word-break: break-word; }
+.hist-fila-gps  { font-size: 11px; color: var(--green2); margin-top: 3px; }
+.hist-fila-meta { text-align: right; flex-shrink: 0; }
+.hist-fila-hora { font-size: 16px; font-weight: 800; color: var(--dark); line-height: 1; margin-bottom: 4px; }
+.hist-fila-fecha{ font-size: 11px; color: #aaa; white-space: nowrap; }
+
+/* ══════════════════════════════════════════
+   SECCIÓN INFORMES EXCEL
+══════════════════════════════════════════ */
+.inf-card {
+  background: var(--white); border-radius: 20px;
+  max-width: 520px; margin: 0 auto;
+  overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+.inf-hd {
+  background: linear-gradient(135deg, #1a5e20 0%, #2e7d32 100%);
+  color: #fff; padding: 24px 28px 20px;
+  display: flex; align-items: center; gap: 14px;
+}
+.inf-hd-icono { font-size: 32px; flex-shrink: 0; }
+.inf-hd-titulo { font-size: 18px; font-weight: 800; }
+.inf-hd-sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 3px; }
+
+.inf-body { padding: 24px 28px; }
+.inf-grupo { margin-bottom: 20px; }
+.inf-grupo:last-child { margin-bottom: 0; }
+.inf-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: #aaa; margin-bottom: 9px;
+}
+.inf-quicks { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+.inf-quick {
+  padding: 6px 14px; border: 1.5px solid var(--border); border-radius: 20px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  background: var(--white); color: #555; transition: all 0.15s;
+}
+.inf-quick:hover  { border-color: var(--green2); color: var(--green2); }
+.inf-quick.activo { background: var(--green2); color: #fff; border-color: var(--green2); }
+
+.inf-fechas { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.inf-date-input {
+  flex: 1; min-width: 130px; padding: 9px 12px;
+  border: 1.5px solid var(--border); border-radius: 9px;
+  font-size: 13px; color: var(--dark); background: var(--white);
+  font-family: inherit;
+}
+.inf-date-input:focus { outline: none; border-color: var(--green2); }
+.inf-sep { color: #ccc; font-size: 14px; }
+
+.inf-preview {
+  background: var(--green-lt); border: 1.5px solid #a5d6a7; border-radius: 10px;
+  padding: 12px 16px; font-size: 13px; color: var(--green2); font-weight: 600;
+  min-height: 44px; display: flex; align-items: center; gap: 8px;
+}
+.inf-preview.vacio { background: #fff8e1; border-color: #ffe082; color: #7a4f00; }
+.inf-desc {
+  background: #f8f9fa; border-radius: 10px; padding: 14px 16px;
+  font-size: 12px; color: #555; line-height: 1.7;
+}
+.inf-desc strong { color: var(--dark); }
+.inf-ft { padding: 0 28px 28px; }
+.btn-descargar {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  padding: 14px 20px; background: var(--green2); color: #fff;
+  border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.btn-descargar:hover    { background: #1b5e20; }
+.btn-descargar:active   { transform: scale(0.98); }
+.btn-descargar:disabled { background: #ccc; cursor: default; }
+
+/* ══════════════════════════════════════════
+   MODAL RESUMEN GENERAL
+══════════════════════════════════════════ */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55); z-index: 100;
+  align-items: flex-start; justify-content: center;
+  padding: 16px; overflow-y: auto;
+}
+.modal-overlay.activo { display: flex; }
+.modal-card {
+  background: var(--white); border-radius: 20px;
+  width: 100%; max-width: 580px; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin: auto;
+}
+.modal-hd {
+  background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
+  color: #fff; padding: 20px 24px 16px;
+}
+.modal-hd-marca {
+  font-size: 10px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--red); margin-bottom: 4px;
+}
+.modal-hd-titulo { font-size: 18px; font-weight: 800; margin-bottom: 2px; }
+.modal-hd-fecha  { font-size: 12px; color: #aaa; }
+.modal-hd-stats {
+  display: flex; gap: 20px; margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.modal-stat-val { font-size: 20px; font-weight: 800; }
+.modal-stat-lbl { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.resumen-tabla { width: 100%; border-collapse: collapse; }
+.resumen-tabla thead tr { background: #f8f9fa; border-bottom: 2px solid #f0f0f0; }
+.resumen-tabla thead th {
+  padding: 10px 14px; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; color: #999; text-align: left;
+}
+.resumen-tabla thead th.centro { text-align: center; }
+.resumen-tabla tbody tr { border-bottom: 1px solid #f5f5f5; }
+.resumen-tabla tbody tr:last-child { border-bottom: none; }
+.resumen-tabla tbody tr.inactiva { opacity: 0.45; }
+.resumen-tabla td { padding: 11px 14px; font-size: 13px; vertical-align: middle; }
+.td-nombre { font-weight: 700; font-size: 12px; line-height: 1.35; }
+.td-placa {
+  font-family: 'Courier New', monospace; font-size: 12px; font-weight: 800;
+  background: var(--dark); color: #fff; padding: 3px 8px !important;
+  border-radius: 5px; white-space: nowrap; display: inline-block;
+}
+.td-hora { font-size: 14px; font-weight: 800; text-align: center; color: var(--dark); }
+.td-hora.vacio  { color: #ddd; font-weight: 400; }
+.td-paradas { text-align: center; font-size: 13px; font-weight: 700; color: var(--red); }
+.td-paradas.vacio { color: #ddd; font-weight: 400; }
+.td-estado { text-align: center; }
+
+.estado-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.estado-completa { background: var(--green-lt); color: var(--green2); }
+.estado-ruta     { background: var(--yellow-lt); color: #7a4f00; }
+.estado-sin-act  { background: #f3f4f6; color: #9ca3af; }
+.estado-parcial  { background: #fee2e2; color: #991b1b; }
+
+.modal-ft {
+  padding: 14px 20px; background: #fafafa;
+  border-top: 1px solid #f0f0f0;
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.btn-wa-general {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 11px 16px; background: #25d366; color: #fff;
+  border: none; border-radius: 10px; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s; min-width: 180px;
+}
+.btn-wa-general:hover   { background: #1ebe5d; }
+.btn-wa-general.copiado { background: var(--green2); }
+.btn-cerrar-modal {
+  padding: 11px 18px; background: var(--white); color: #666;
+  border: 1.5px solid #e0e0e0; border-radius: 10px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.btn-cerrar-modal:hover { background: #f5f5f5; }
+
+/* ══════════════════════════════════════════
+   SECCIÓN CONDUCTORES
+══════════════════════════════════════════ */
+.cond-wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Tarjeta formulario */
+.cond-form-card {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.cond-form-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--dark);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cond-form-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px; height: 16px;
+  background: var(--red);
+  border-radius: 2px;
+}
+.cond-form-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cond-input {
+  flex: 1;
+  min-width: 160px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--dark);
+  font-family: inherit;
+  background: var(--white);
+  transition: border-color 0.15s;
+}
+.cond-input:focus { outline: none; border-color: var(--red); }
+.cond-input::placeholder { color: #bbb; }
+.cond-input-placa {
+  max-width: 130px;
+  text-transform: uppercase;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.btn-agregar {
+  padding: 10px 20px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.btn-agregar:hover  { background: var(--red-dk); }
+.btn-agregar:active { transform: scale(0.97); }
+.cond-form-err {
+  font-size: 12px;
+  color: var(--red);
+  margin-top: 8px;
+  min-height: 18px;
+}
+
+/* Lista de conductores */
+.cond-lista-card {
+  background: var(--white);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.cond-lista-hd {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cond-lista-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--dark);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cond-lista-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px; height: 16px;
+  background: var(--green2);
+  border-radius: 2px;
+}
+.cond-count {
+  font-size: 12px;
+  color: var(--muted);
+  background: #f0f0f0;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+.cond-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f8f8f8;
+  transition: background 0.12s;
+}
+.cond-item:last-child { border-bottom: none; }
+.cond-item:hover { background: #fafafa; }
+.cond-item-num {
+  width: 24px;
+  font-size: 12px;
+  color: #ccc;
+  font-weight: 700;
+  text-align: center;
+  flex-shrink: 0;
+}
+.cond-item-info { flex: 1; min-width: 0; }
+.cond-item-nombre {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cond-item-placa {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--dark);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+.btn-eliminar {
+  padding: 6px 14px;
+  background: #fff;
+  color: var(--red);
+  border: 1.5px solid #fecaca;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.btn-eliminar:hover {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
+}
+.cond-aviso {
+  font-size: 12px;
+  color: #aaa;
+  text-align: center;
+  padding: 32px 20px;
+}
+
+/* Separador inactivos */
+.sec-separator {
+  text-align: center; margin: 28px 0 12px;
+  font-size: 12px; color: #bbb;
+  text-transform: uppercase; letter-spacing: 1px; font-weight: 700;
+}
+
+@media print {
+  .admin-header, .tab-nav, .toolbar, .filtros-row { display: none !important; }
+  .seccion { padding: 0; }
+  .tarjetas-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .tarjeta { box-shadow: none; border: 1px solid #eee; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════ -->
+<header class="admin-header">
+
+  <!-- Logo Bavaria (izquierda) — píldora blanca para PNG con fondo blanco -->
+  <div class="hdr-logo-bavaria-wrap">
+    <img src="images/BavariaImagen.png" alt="Bavaria" class="hdr-logo">
+  </div>
+
+  <div class="hdr-divider"></div>
+
+  <!-- Centro: marca + título + badge -->
+  <div class="hdr-center">
+    <div class="hdr-brand">
+      <span class="b-bavaria">Bavaria</span><span class="b-x">×</span><span class="b-ua">Unión Andina</span>
+    </div>
+    <div class="hdr-title">Panel de Administración &nbsp;<span class="hdr-badge">ADMIN</span></div>
+  </div>
+
+  <div class="hdr-fecha" id="header-fecha"></div>
+
+  <div class="hdr-divider"></div>
+
+  <!-- Logo Unión Andina (derecha) — colores originales -->
+  <img src="images/Unionandina.png" alt="Unión Andina" class="hdr-logo hdr-logo-ua">
+
+</header>
+
+<!-- ══════════════════════════════════════════
+     TABS
+══════════════════════════════════════════ -->
+<nav class="tab-nav">
+  <button class="tab-btn activo" id="tab-dashboard" onclick="cambiarSeccion('dashboard')">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    Dashboard del día
+  </button>
+  <button class="tab-btn" id="tab-historial" onclick="cambiarSeccion('historial')">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Historial
+  </button>
+  <button class="tab-btn" id="tab-informes" onclick="cambiarSeccion('informes')">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Informes Excel
+  </button>
+  <button class="tab-btn" id="tab-conductores" onclick="cambiarSeccion('conductores')">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Conductores
+  </button>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     SECCIÓN 1: DASHBOARD DEL DÍA
+══════════════════════════════════════════ -->
+<section class="seccion activo" id="sec-dashboard">
+
+  <div class="toolbar">
+    <button class="btn btn-red" onclick="cargar()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Actualizar
+    </button>
+    <button class="btn btn-dark" onclick="abrirResumenGeneral()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Vista resumen general
+    </button>
+  </div>
+
+  <div class="filtros-row" id="filtros-row"></div>
+
+  <div id="contenido">
+    <div class="estado-carga">
+      <div class="spinner"></div>
+      Cargando registros...
+    </div>
+  </div>
+
+</section>
+
+<!-- ══════════════════════════════════════════
+     SECCIÓN 2: HISTORIAL
+══════════════════════════════════════════ -->
+<section class="seccion" id="sec-historial">
+
+  <div class="hist-panel">
+    <div class="hist-grupo">
+      <div class="hist-grupo-label">Conductor / Placa</div>
+      <div class="hist-chips" id="h-chips-conductor"></div>
+    </div>
+
+    <div class="hist-grupo">
+      <div class="hist-grupo-label">Fecha</div>
+      <div class="hist-fecha-row">
+        <button class="hist-quick activo" id="h-quick-hoy"    onclick="aplicarQuickFecha('hoy')">Hoy</button>
+        <button class="hist-quick"        id="h-quick-ayer"   onclick="aplicarQuickFecha('ayer')">Ayer</button>
+        <button class="hist-quick"        id="h-quick-semana" onclick="aplicarQuickFecha('semana')">7 días</button>
+        <button class="hist-quick"        id="h-quick-todo"   onclick="aplicarQuickFecha('todo')">Todo</button>
+        <input type="date" class="hist-date-input" id="h-fecha-desde"
+               onchange="hFiltros.fechaDesde=this.value; quitarQuickActivo(); renderHistorial();">
+        <span class="hist-sep">→</span>
+        <input type="date" class="hist-date-input" id="h-fecha-hasta"
+               onchange="hFiltros.fechaHasta=this.value; quitarQuickActivo(); renderHistorial();">
+        <button class="hist-orden-btn" id="h-orden-btn" onclick="toggleOrden()">↓ Más reciente</button>
+      </div>
+    </div>
+
+    <div class="hist-grupo">
+      <div class="hist-grupo-label">Tipo de evento</div>
+      <div class="hist-chips">
+        <button class="hist-chip h-tipo-chip activo"  onclick="setHTipo('todos', this)">Todos</button>
+        <button class="hist-chip h-tipo-chip" onclick="setHTipo('Inicio jornada', this)">🟢 Inicio jornada</button>
+        <button class="hist-chip h-tipo-chip" onclick="setHTipo('Llegada a parada', this)">📍 Llegada a parada</button>
+        <button class="hist-chip h-tipo-chip" onclick="setHTipo('Salida de parada', this)">🚌 Salida de parada</button>
+        <button class="hist-chip h-tipo-chip" onclick="setHTipo('Fin jornada', this)">🔴 Fin jornada</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hist-meta-bar">
+    <div class="hist-contador" id="h-contador"></div>
+  </div>
+  <div class="hist-lista" id="h-lista"></div>
+
+</section>
+
+<!-- ══════════════════════════════════════════
+     SECCIÓN 3: INFORMES EXCEL
+══════════════════════════════════════════ -->
+<section class="seccion" id="sec-informes">
+
+  <div class="inf-card">
+    <div class="inf-hd">
+      <div class="inf-hd-icono">📊</div>
+      <div>
+        <div class="inf-hd-titulo">Generar informe Excel</div>
+        <div class="inf-hd-sub">Selecciona el rango de fechas a exportar</div>
+      </div>
+    </div>
+
+    <div class="inf-body">
+      <div class="inf-grupo">
+        <div class="inf-label">Período rápido</div>
+        <div class="inf-quicks">
+          <button class="inf-quick activo" id="xq-hoy"    onclick="excelQuick('hoy')">Hoy</button>
+          <button class="inf-quick"        id="xq-ayer"   onclick="excelQuick('ayer')">Ayer</button>
+          <button class="inf-quick"        id="xq-semana" onclick="excelQuick('semana')">7 días</button>
+          <button class="inf-quick"        id="xq-mes"    onclick="excelQuick('mes')">Este mes</button>
+          <button class="inf-quick"        id="xq-todo"   onclick="excelQuick('todo')">Todo el historial</button>
+        </div>
+      </div>
+
+      <div class="inf-grupo">
+        <div class="inf-label">Rango personalizado</div>
+        <div class="inf-fechas">
+          <input type="date" class="inf-date-input" id="x-desde"
+                 onchange="xFiltros.desde=this.value; excelQuitarQuick(); actualizarPreviewExcel();">
+          <span class="inf-sep">→</span>
+          <input type="date" class="inf-date-input" id="x-hasta"
+                 onchange="xFiltros.hasta=this.value; excelQuitarQuick(); actualizarPreviewExcel();">
+        </div>
+      </div>
+
+      <div class="inf-grupo">
+        <div class="inf-label">Registros en el rango</div>
+        <div class="inf-preview" id="x-preview">Selecciona un período para ver la cantidad de registros.</div>
+      </div>
+
+      <div class="inf-grupo">
+        <div class="inf-label">Contenido del archivo</div>
+        <div class="inf-desc">
+          <strong>Hoja 1 — Registros:</strong> Fecha, hora, conductor, placa, tipo de registro, nota y GPS de cada evento.<br>
+          <strong>Hoja 2 — Resumen por conductor:</strong> Días trabajados, hora promedio de inicio/fin, total de paradas y horas trabajadas por conductor.
+        </div>
+      </div>
+    </div>
+
+    <div class="inf-ft">
+      <button class="btn-descargar" id="btn-descargar" onclick="descargarExcel()" disabled>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Descargar .xlsx
+      </button>
+    </div>
+  </div>
+
+</section>
+
+<!-- ══════════════════════════════════════════
+     SECCIÓN 4: CONDUCTORES
+══════════════════════════════════════════ -->
+<section class="seccion" id="sec-conductores">
+  <div class="cond-wrap">
+
+    <!-- Formulario agregar -->
+    <div class="cond-form-card">
+      <div class="cond-form-title">Agregar conductor</div>
+      <div class="cond-form-row">
+        <input  type="text" class="cond-input" id="cond-nombre"
+                placeholder="Nombre completo (ej: JUAN PÉREZ GÓMEZ)"
+                oninput="this.value=this.value.toUpperCase()">
+        <input  type="text" class="cond-input cond-input-placa" id="cond-placa"
+                placeholder="Placa" maxlength="7"
+                oninput="this.value=this.value.toUpperCase()">
+        <button class="btn-agregar" onclick="agregarConductor()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Agregar conductor
+        </button>
+      </div>
+      <div class="cond-form-err" id="cond-err"></div>
+    </div>
+
+    <!-- Lista conductores -->
+    <div class="cond-lista-card">
+      <div class="cond-lista-hd">
+        <div class="cond-lista-title">Conductores activos</div>
+        <div class="cond-count" id="cond-count">0</div>
+      </div>
+      <div id="cond-lista"></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     MODAL RESUMEN GENERAL
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-resumen" onclick="cerrarModalSiOverlay(event)">
+  <div class="modal-card">
+
+    <div class="modal-hd">
+      <div class="modal-hd-marca">BavariaxUnionAndina</div>
+      <div class="modal-hd-titulo">Resumen general del día</div>
+      <div class="modal-hd-fecha" id="modal-fecha"></div>
+      <div class="modal-hd-stats" id="modal-stats"></div>
+    </div>
+
+    <table class="resumen-tabla">
+      <thead>
+        <tr>
+          <th>Conductor</th>
+          <th>Placa</th>
+          <th class="centro">Inicio</th>
+          <th class="centro">Fin</th>
+          <th class="centro">Paradas</th>
+          <th class="centro">Estado</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-body"></tbody>
+    </table>
+
+    <div class="modal-ft">
+      <button class="btn-wa-general" id="btn-wa-general" onclick="copiarResumenGeneral()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.555 4.116 1.528 5.845L.057 23.943l6.262-1.642A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 01-5.003-1.367l-.358-.213-3.716.975.992-3.624-.234-.372A9.797 9.797 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
+        Copiar para WhatsApp
+      </button>
+      <button class="btn-cerrar-modal" onclick="cerrarModal()">Cerrar</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// GUARDIÁN DE ACCESO — verifica sesión admin
+// ══════════════════════════════════════════
+const SESION_KEY = 'bxua_sesion'; //mismo valor exacto que en Logica.js
+
+(function verificarAcceso() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(SESION_KEY));
+    if (!s || s.rol !== 'admin') throw new Error();
+  }catch(_) {
+    window.location.replace('index.html');
+  }
+})();
+// ══════════════════════════════════════════
+// CONFIGURACIÓN
+// ══════════════════════════════════════════
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybeK--ANSECbaOHO4sspV3111fnO5ya5xCi5qiqhpx8K_8nI6W1xZloBToZhTDbOkAEQ/exec';
+
+const CONDUCTORES_DEFAULT = [
+  { nombre: 'CARLOS MARIO GÁMEZ',            placa: 'JVK031' },
+  { nombre: 'DEIBIS RAFAEL PADILLA',         placa: 'JVK142' },
+  { nombre: 'OSCAR ANDRES VASQUEZ',          placa: 'JVK595' },
+  { nombre: 'FREDY SANTANA ACUÑA',           placa: 'JVK594' },
+  { nombre: 'JOSE EDGARDO HERNANDEZ CRUZ',   placa: 'JVK129' },
+  { nombre: 'WALTER YESID PACHON RODRIGUEZ', placa: 'JVK128' },
+];
+let CONDUCTORES_FIJOS = (function() {
+  try {
+    const raw = localStorage.getItem('bxua_conductores');
+    if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr) && arr.length) return arr; }
+  } catch(_) {}
+  return CONDUCTORES_DEFAULT.slice();
+})();
+
+const TIPO_CONFIG = {
+  'Inicio jornada':   { clase: 'inicio',  icono: '🟢' },
+  'Llegada a parada': { clase: 'llegada', icono: '📍' },
+  'Salida de parada': { clase: 'salida',  icono: '🚌' },
+  'Fin jornada':      { clase: 'fin',     icono: '🔴' },
+};
+
+let todosRegistros = [];
+let filtroActivo   = 'todos';
+
+// ══════════════════════════════════════════
+// UTILIDADES
+// ══════════════════════════════════════════
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function hoyKey() {
+  const h = new Date();
+  return `${h.getFullYear()}-${pad(h.getMonth()+1)}-${pad(h.getDate())}`;
+}
+
+function fechaOffset(dias) {
+  const d = new Date();
+  d.setDate(d.getDate() + dias);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function horaDesdeTimestamp(ts) {
+  const d = new Date(ts);
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s || '');
+  return d.innerHTML;
+}
+
+function fechaLarga(fecha) {
+  const dias  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
+                 'septiembre','octubre','noviembre','diciembre'];
+  return `${dias[fecha.getDay()]}, ${fecha.getDate()} de ${meses[fecha.getMonth()]} de ${fecha.getFullYear()}`;
+}
+
+const MESES_CORTOS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+// ══════════════════════════════════════════
+// CONDUCTORES — gestión y persistencia
+// ══════════════════════════════════════════
+function guardarConductores() {
+  localStorage.setItem('bxua_conductores', JSON.stringify(CONDUCTORES_FIJOS));
+}
+
+function renderConductores() {
+  const lista = document.getElementById('cond-lista');
+  const count = document.getElementById('cond-count');
+  count.textContent = CONDUCTORES_FIJOS.length;
+
+  if (CONDUCTORES_FIJOS.length === 0) {
+    lista.innerHTML = '<div class="cond-aviso">No hay conductores registrados.</div>';
+    return;
+  }
+
+  lista.innerHTML = CONDUCTORES_FIJOS.map((c, i) => `
+    <div class="cond-item">
+      <div class="cond-item-num">${i + 1}</div>
+      <div class="cond-item-info">
+        <div class="cond-item-nombre">${c.nombre}</div>
+        <span class="cond-item-placa">${c.placa}</span>
+      </div>
+      <button class="btn-eliminar" onclick="eliminarConductor(${i})">Eliminar</button>
+    </div>`).join('');
+}
+
+function agregarConductor() {
+  const nombreEl = document.getElementById('cond-nombre');
+  const placaEl  = document.getElementById('cond-placa');
+  const errEl    = document.getElementById('cond-err');
+  const nombre   = nombreEl.value.trim().toUpperCase();
+  const placa    = placaEl.value.trim().toUpperCase();
+
+  if (!nombre) { errEl.textContent = 'Ingresa el nombre completo.'; return; }
+  if (!placa)  { errEl.textContent = 'Ingresa la placa del vehículo.'; return; }
+  if (CONDUCTORES_FIJOS.some(c => c.nombre === nombre)) {
+    errEl.textContent = 'Ya existe un conductor con ese nombre.'; return;
+  }
+
+  errEl.textContent = '';
+  CONDUCTORES_FIJOS.push({ nombre, placa });
+  guardarConductores();
+  renderConductores();
+  nombreEl.value = '';
+  placaEl.value  = '';
+  nombreEl.focus();
+}
+
+function eliminarConductor(idx) {
+  const c = CONDUCTORES_FIJOS[idx];
+  if (!c) return;
+  const ok = confirm(`¿Seguro que deseas eliminar a ${c.nombre}?\nEsta acción no se puede deshacer.`);
+  if (!ok) return;
+  CONDUCTORES_FIJOS.splice(idx, 1);
+  guardarConductores();
+  renderConductores();
+}
+
+// ══════════════════════════════════════════
+// NAVEGACIÓN
+// ══════════════════════════════════════════
+function cambiarSeccion(sec) {
+  ['dashboard','historial','informes','conductores'].forEach(s => {
+    document.getElementById('sec-' + s).classList.toggle('activo', s === sec);
+    document.getElementById('tab-' + s).classList.toggle('activo', s === sec);
+  });
+  if (sec === 'historial')   renderHistorial();
+  if (sec === 'informes')    xInicializar();
+  if (sec === 'conductores') renderConductores();
+}
+
+// ══════════════════════════════════════════
+// CARGA DE DATOS
+// ══════════════════════════════════════════
+async function cargar() {
+  document.getElementById('contenido').innerHTML =
+    `<div class="estado-carga"><div class="spinner"></div>Cargando registros...</div>`;
+  document.getElementById('filtros-row').innerHTML = '';
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL);
+    todosRegistros = await res.json();
+    if (!Array.isArray(todosRegistros)) throw new Error('Formato inesperado');
+    renderFiltros();
+    renderTarjetas();
+  } catch (e) {
+    document.getElementById('contenido').innerHTML = `
+      <div class="sin-registros">
+        ⚠️ No se pudo conectar con Google Sheets.<br>
+        <small style="color:#bbb;margin-top:8px;display:block;">${e.message}</small>
+        <button class="btn btn-red" onclick="cargar()" style="margin-top:16px;">Reintentar</button>
+      </div>`;
+  }
+}
+
+// ══════════════════════════════════════════
+// DASHBOARD — FILTROS Y TARJETAS
+// ══════════════════════════════════════════
+function renderFiltros() {
+  const hoy = hoyKey();
+  const activos = new Set(
+    todosRegistros.filter(r => String(r.fecha).slice(0,10) === hoy).map(r => r.conductor.trim())
+  );
+  const row = document.getElementById('filtros-row');
+  row.innerHTML = '';
+  if (activos.size === 0) return;
+
+  const crearBtn = (label, valor) => {
+    const b = document.createElement('button');
+    b.className = 'btn btn-outline' + (filtroActivo === valor ? ' activo' : '');
+    b.textContent = label;
+    b.onclick = () => { filtroActivo = valor; renderFiltros(); renderTarjetas(); };
+    return b;
+  };
+
+  row.appendChild(crearBtn('Todos', 'todos'));
+  activos.forEach(c => {
+    const cf = CONDUCTORES_FIJOS.find(x => x.nombre.trim() === c);
+    row.appendChild(crearBtn(cf ? cf.placa : c.split(' ')[0], c));
+  });
+}
+
+function renderTarjetas() {
+  const hoy = hoyKey();
+  const registrosHoy = todosRegistros.filter(r => String(r.fecha).slice(0,10) === hoy);
+  const porConductor = {};
+  registrosHoy.forEach(r => {
+    const nombre = r.conductor.trim();
+    if (!porConductor[nombre]) porConductor[nombre] = [];
+    porConductor[nombre].push(r);
+  });
+
+  let conductoresActivos, conductoresInactivos;
+  if (filtroActivo === 'todos') {
+    conductoresActivos   = CONDUCTORES_FIJOS.filter(c => porConductor[c.nombre.trim()]);
+    conductoresInactivos = CONDUCTORES_FIJOS.filter(c => !porConductor[c.nombre.trim()]);
+  } else {
+    const c = CONDUCTORES_FIJOS.find(x => x.nombre.trim() === filtroActivo);
+    conductoresActivos   = c ? [c] : [];
+    conductoresInactivos = [];
+  }
+
+  if (conductoresActivos.length === 0) {
+    document.getElementById('contenido').innerHTML =
+      `<div class="sin-registros">Sin registros hoy todavía.</div>`;
+    return;
+  }
+
+  const contenido = document.getElementById('contenido');
+  contenido.innerHTML = '';
+
+  const grid = document.createElement('div');
+  grid.className = 'tarjetas-grid';
+  conductoresActivos.forEach(c => {
+    const regs = (porConductor[c.nombre.trim()] || [])
+      .slice().sort((a,b) => a.timestamp.localeCompare(b.timestamp));
+    grid.appendChild(crearTarjeta(c, regs));
+  });
+  contenido.appendChild(grid);
+
+  if (filtroActivo === 'todos' && conductoresInactivos.length > 0) {
+    const sep = document.createElement('div');
+    sep.className = 'sec-separator';
+    sep.textContent = 'Sin actividad hoy';
+    contenido.appendChild(sep);
+    const g2 = document.createElement('div');
+    g2.className = 'tarjetas-grid';
+    conductoresInactivos.forEach(c => g2.appendChild(crearTarjetaInactivo(c)));
+    contenido.appendChild(g2);
+  }
+}
+
+function datosCondutor(nombre, porConductor) {
+  const regs = (porConductor[nombre.trim()] || [])
+    .slice().sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  const inicio  = regs.find(r => r.tipo === 'Inicio jornada');
+  const fin     = regs.find(r => r.tipo === 'Fin jornada');
+  const paradas = regs.filter(r => r.tipo === 'Llegada a parada' || r.tipo === 'Salida de parada');
+
+  let duracion = '—';
+  if (inicio && fin) {
+    const mins = Math.round((new Date(fin.timestamp) - new Date(inicio.timestamp)) / 60000);
+    duracion = `${Math.floor(mins/60)}h ${mins%60}m`;
+  }
+
+  let estadoKey = 'sin';
+  if (inicio && fin)      estadoKey = 'completa';
+  else if (inicio)        estadoKey = 'ruta';
+  else if (regs.length)   estadoKey = 'parcial';
+
+  return { regs, inicio, fin, paradas, duracion, estadoKey };
+}
+
+function crearTarjeta(conductor, registros) {
+  const inicio  = registros.find(r => r.tipo === 'Inicio jornada');
+  const fin     = registros.find(r => r.tipo === 'Fin jornada');
+  const paradas = registros.filter(r => r.tipo === 'Llegada a parada' || r.tipo === 'Salida de parada');
+
+  let duracionTxt = '—';
+  if (inicio && fin) {
+    const mins = Math.round((new Date(fin.timestamp) - new Date(inicio.timestamp)) / 60000);
+    duracionTxt = `${Math.floor(mins/60)}h ${mins%60}m`;
+  }
+
+  let estadoBadge = '';
+  if (inicio && fin)  estadoBadge = `<span class="badge badge-completa">✓ Jornada completa</span>`;
+  else if (inicio)    estadoBadge = `<span class="badge badge-sin-fin">En ruta</span>`;
+  else                estadoBadge = `<span class="badge badge-parcial">Sin inicio</span>`;
+
+  const card = document.createElement('div');
+  card.className = 'tarjeta';
+  card.innerHTML = `
+    <div class="tarjeta-cabecera">
+      <div class="tarjeta-nombre">${esc(conductor.nombre)}</div>
+      <div class="tarjeta-placa">${esc(conductor.placa)}</div>
+    </div>
+    <div class="tarjeta-resumen">
+      <div class="resumen-item">
+        <div class="resumen-item-val verde">${inicio ? horaDesdeTimestamp(inicio.timestamp) : '—'}</div>
+        <div class="resumen-item-lbl">Inicio</div>
+      </div>
+      <div class="resumen-item">
+        <div class="resumen-item-val naranja">${paradas.length}</div>
+        <div class="resumen-item-lbl">Paradas</div>
+      </div>
+      <div class="resumen-item">
+        <div class="resumen-item-val rojo">${fin ? horaDesdeTimestamp(fin.timestamp) : '—'}</div>
+        <div class="resumen-item-lbl">Fin</div>
+      </div>
+      <div class="resumen-item">
+        <div class="resumen-item-val">${duracionTxt}</div>
+        <div class="resumen-item-lbl">Duración</div>
+      </div>
+    </div>`;
+
+  const timeline = document.createElement('div');
+  timeline.className = 'timeline';
+  registros.forEach(r => {
+    const cfg = TIPO_CONFIG[r.tipo] || { clase: 'otro', icono: '⚫' };
+    const ev = document.createElement('div');
+    ev.className = 'tl-evento';
+    ev.innerHTML = `
+      <div class="tl-icono ${cfg.clase}">${cfg.icono}</div>
+      <div class="tl-contenido">
+        <div class="tl-tipo ${cfg.clase}">${esc(r.tipo)}</div>
+        <div class="tl-hora">${horaDesdeTimestamp(r.timestamp)}</div>
+        <div class="tl-nota">${esc(r.nota)}</div>
+        ${r.lat ? `<div class="tl-gps">📍 <a href="https://www.google.com/maps?q=${r.lat},${r.lng}" target="_blank" style="color:#2e7d32;">${Number(r.lat).toFixed(5)}, ${Number(r.lng).toFixed(5)}</a></div>` : ''}
+      </div>`;
+    timeline.appendChild(ev);
+  });
+  card.appendChild(timeline);
+
+  const btnWa = document.createElement('button');
+  btnWa.className = 'btn-whatsapp';
+  btnWa.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.555 4.116 1.528 5.845L.057 23.943l6.262-1.642A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 01-5.003-1.367l-.358-.213-3.716.975.992-3.624-.234-.372A9.797 9.797 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>Copiar para WhatsApp`;
+  btnWa.onclick = () => copiarWhatsAppIndividual(conductor, registros, duracionTxt, btnWa);
+  card.appendChild(btnWa);
+
+  const pie = document.createElement('div');
+  pie.className = 'tarjeta-pie';
+  pie.innerHTML = `
+    <span>${registros.length} registro${registros.length !== 1 ? 's' : ''} · duración ${duracionTxt}</span>
+    <div class="tarjeta-pie-badge">${estadoBadge}</div>`;
+  card.appendChild(pie);
+
+  return card;
+}
+
+function crearTarjetaInactivo(conductor) {
+  const div = document.createElement('div');
+  div.className = 'conductor-inactivo';
+  div.innerHTML = `
+    <div class="inactivo-icono">💤</div>
+    <div>
+      <div class="inactivo-nombre">${esc(conductor.nombre)}</div>
+      <div class="inactivo-placa">${esc(conductor.placa)} · Sin actividad</div>
+    </div>`;
+  return div;
+}
+
+// ══════════════════════════════════════════
+// MODAL RESUMEN GENERAL
+// ══════════════════════════════════════════
+const WA_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.555 4.116 1.528 5.845L.057 23.943l6.262-1.642A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 01-5.003-1.367l-.358-.213-3.716.975.992-3.624-.234-.372A9.797 9.797 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>`;
+
+function abrirResumenGeneral() {
+  const hoy = hoyKey();
+  const ahora = new Date();
+  const registrosHoy = todosRegistros.filter(r => String(r.fecha).slice(0,10) === hoy);
+
+  const porConductor = {};
+  registrosHoy.forEach(r => {
+    const nombre = r.conductor.trim();
+    if (!porConductor[nombre]) porConductor[nombre] = [];
+    porConductor[nombre].push(r);
+  });
+
+  let nCompletas = 0, nRuta = 0, nSin = 0;
+  CONDUCTORES_FIJOS.forEach(c => {
+    const d = datosCondutor(c.nombre, porConductor);
+    if      (d.estadoKey === 'completa')                         nCompletas++;
+    else if (d.estadoKey === 'ruta' || d.estadoKey === 'parcial') nRuta++;
+    else                                                          nSin++;
+  });
+
+  document.getElementById('modal-fecha').textContent =
+    `${fechaLarga(ahora)} — ${pad(ahora.getHours())}:${pad(ahora.getMinutes())}`;
+
+  document.getElementById('modal-stats').innerHTML = `
+    <div><div class="modal-stat-val" style="color:#2e7d32">${nCompletas}</div><div class="modal-stat-lbl">Completas</div></div>
+    <div><div class="modal-stat-val" style="color:#F5A621">${nRuta}</div><div class="modal-stat-lbl">En ruta</div></div>
+    <div><div class="modal-stat-val" style="color:#9ca3af">${nSin}</div><div class="modal-stat-lbl">Sin actividad</div></div>
+    <div><div class="modal-stat-val" style="color:#E30613">${registrosHoy.length}</div><div class="modal-stat-lbl">Registros totales</div></div>`;
+
+  const ESTADO_HTML = {
+    completa: `<span class="estado-badge estado-completa">✓ Completa</span>`,
+    ruta:     `<span class="estado-badge estado-ruta">● En ruta</span>`,
+    parcial:  `<span class="estado-badge estado-parcial">⚠ Parcial</span>`,
+    sin:      `<span class="estado-badge estado-sin-act">— Sin actividad</span>`,
+  };
+
+  const tbody = document.getElementById('tabla-body');
+  tbody.innerHTML = '';
+  CONDUCTORES_FIJOS.forEach(c => {
+    const d = datosCondutor(c.nombre, porConductor);
+    const tr = document.createElement('tr');
+    if (d.estadoKey === 'sin') tr.classList.add('inactiva');
+    const nombreCorto = c.nombre.length > 22
+      ? c.nombre.split(' ').map((p, i) => i === 0 ? p : p[0] + '.').join(' ')
+      : c.nombre;
+    tr.innerHTML = `
+      <td class="td-nombre">${esc(nombreCorto)}</td>
+      <td><span class="td-placa">${esc(c.placa)}</span></td>
+      <td class="td-hora ${d.inicio ? '' : 'vacio'}">${d.inicio ? horaDesdeTimestamp(d.inicio.timestamp) : '—'}</td>
+      <td class="td-hora ${d.fin ? '' : 'vacio'}">${d.fin ? horaDesdeTimestamp(d.fin.timestamp) : '—'}</td>
+      <td class="td-paradas ${d.paradas.length ? '' : 'vacio'}">${d.paradas.length || '—'}</td>
+      <td class="td-estado">${ESTADO_HTML[d.estadoKey]}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const btn = document.getElementById('btn-wa-general');
+  btn.classList.remove('copiado');
+  btn.innerHTML = WA_SVG + 'Copiar para WhatsApp';
+  document.getElementById('modal-resumen').classList.add('activo');
+}
+
+function cerrarModal() { document.getElementById('modal-resumen').classList.remove('activo'); }
+function cerrarModalSiOverlay(e) { if (e.target === document.getElementById('modal-resumen')) cerrarModal(); }
+
+function copiarResumenGeneral() {
+  const hoy = hoyKey();
+  const ahora = new Date();
+  const registrosHoy = todosRegistros.filter(r => String(r.fecha).slice(0,10) === hoy);
+  const porConductor = {};
+  registrosHoy.forEach(r => {
+    const nombre = r.conductor.trim();
+    if (!porConductor[nombre]) porConductor[nombre] = [];
+    porConductor[nombre].push(r);
+  });
+
+  const ICONOS  = { completa: '✅', ruta: '🔄', parcial: '⚠️', sin: '💤' };
+  const TEXTOS  = { completa: 'Jornada completa', ruta: 'En ruta', parcial: 'Sin inicio registrado', sin: 'Sin actividad' };
+
+  let nCompletas = 0, nRuta = 0, nSin = 0;
+  CONDUCTORES_FIJOS.forEach(c => {
+    const d = datosCondutor(c.nombre, porConductor);
+    if      (d.estadoKey === 'completa')                         nCompletas++;
+    else if (d.estadoKey === 'ruta' || d.estadoKey === 'parcial') nRuta++;
+    else                                                          nSin++;
+  });
+
+  const L = [];
+  L.push(`🚛 *BavariaxUnionAndina — Resumen del día*`);
+  L.push(`📅 ${fechaLarga(ahora)} — ${pad(ahora.getHours())}:${pad(ahora.getMinutes())}`);
+  L.push('');
+  L.push(`✅ ${nCompletas} completa${nCompletas !== 1 ? 's' : ''}  🔄 ${nRuta} en ruta  💤 ${nSin} sin actividad`);
+  L.push('');
+  L.push('─────────────────────────');
+  L.push('');
+  CONDUCTORES_FIJOS.forEach(c => {
+    const d = datosCondutor(c.nombre, porConductor);
+    const ini = d.inicio ? horaDesdeTimestamp(d.inicio.timestamp) : '—';
+    const fin = d.fin    ? horaDesdeTimestamp(d.fin.timestamp)    : '—';
+    L.push(`*${c.nombre}*`);
+    L.push(`${c.placa}  ·  ${ini} → ${fin}`);
+    L.push(`${ICONOS[d.estadoKey]} ${TEXTOS[d.estadoKey]}`);
+    L.push('');
+  });
+  L.push('_BavariaxUnionAndina_');
+
+  const texto = L.join('\n');
+  const btn = document.getElementById('btn-wa-general');
+
+  const marcarCopiado = () => {
+    btn.classList.add('copiado');
+    btn.textContent = '✓ ¡Copiado! Pégalo en WhatsApp';
+    setTimeout(() => { btn.classList.remove('copiado'); btn.innerHTML = WA_SVG + 'Copiar para WhatsApp'; }, 2500);
+  };
+
+  navigator.clipboard.writeText(texto).then(marcarCopiado).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    marcarCopiado();
+  });
+}
+
+function copiarWhatsAppIndividual(conductor, registros, duracionTxt, btn) {
+  const ICONOS_TIPO = {
+    'Inicio jornada': '🟢', 'Llegada a parada': '📍',
+    'Salida de parada': '🚌', 'Fin jornada': '🔴',
+  };
+  const inicio  = registros.find(r => r.tipo === 'Inicio jornada');
+  const fin     = registros.find(r => r.tipo === 'Fin jornada');
+  const paradas = registros.filter(r => r.tipo === 'Llegada a parada' || r.tipo === 'Salida de parada');
+  const estado  = inicio && fin ? '✅ Jornada completa' : inicio ? '🔄 En ruta' : '⚠️ Sin inicio registrado';
+
+  const L = [];
+  L.push(`🚛 *${conductor.nombre} — ${conductor.placa}*`);
+  L.push(`📅 ${fechaLarga(new Date())}`);
+  L.push('');
+  registros.forEach(r => {
+    L.push(`${ICONOS_TIPO[r.tipo] || '⚫'} *${r.tipo}* — ${horaDesdeTimestamp(r.timestamp)}`);
+    L.push(`   ${r.nota}`);
+    if (r.lat) L.push(`   📍 https://www.google.com/maps?q=${r.lat},${r.lng}`);
+    L.push('');
+  });
+  L.push(`⏱ Duración: ${duracionTxt} · ${paradas.length} parada${paradas.length !== 1 ? 's' : ''}`);
+  L.push(estado);
+  L.push('');
+  L.push('_BavariaxUnionAndina_');
+
+  const texto = L.join('\n');
+  const original = btn.innerHTML;
+
+  const marcar = () => {
+    btn.classList.add('copiado');
+    btn.innerHTML = '✓ ¡Copiado! Pégalo en WhatsApp';
+    setTimeout(() => { btn.classList.remove('copiado'); btn.innerHTML = original; }, 2500);
+  };
+
+  navigator.clipboard.writeText(texto).then(marcar).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    marcar();
+  });
+}
+
+// ══════════════════════════════════════════
+// HISTORIAL
+// ══════════════════════════════════════════
+const hFiltros = { conductor: 'todos', fechaDesde: '', fechaHasta: '', tipo: 'todos', orden: 'desc' };
+
+function initHistorial() {
+  const hoy = hoyKey();
+  hFiltros.fechaDesde = hoy;
+  hFiltros.fechaHasta = hoy;
+  document.getElementById('h-fecha-desde').value = hoy;
+  document.getElementById('h-fecha-hasta').value = hoy;
+
+  const contenedor = document.getElementById('h-chips-conductor');
+  contenedor.innerHTML = '';
+
+  const crearChip = (label, valor) => {
+    const b = document.createElement('button');
+    b.className = 'hist-chip h-cond-chip' + (valor === 'todos' ? ' activo' : '');
+    b.textContent = label;
+    b.onclick = () => setHConductor(valor, b);
+    return b;
+  };
+
+  contenedor.appendChild(crearChip('Todos', 'todos'));
+  CONDUCTORES_FIJOS.forEach(c => contenedor.appendChild(crearChip(c.placa, c.nombre.trim())));
+
+  // Conductores históricos
+  const nombresActivos = new Set(CONDUCTORES_FIJOS.map(c => c.nombre.trim()));
+  const histConductores = new Map();
+  todosRegistros.forEach(r => {
+    const nombre = r.conductor.trim();
+    if (nombre && !nombresActivos.has(nombre) && !histConductores.has(nombre)) {
+      histConductores.set(nombre, r.placa);
+    }
+  });
+  histConductores.forEach((placa, nombre) => {
+    const chip = crearChip(placa, nombre);
+    chip.title = `${nombre} (conductor histórico)`;
+    chip.style.borderStyle = 'dashed';
+    chip.style.color = '#888';
+    contenedor.appendChild(chip);
+  });
+}
+
+function setHConductor(valor, el) {
+  hFiltros.conductor = valor;
+  document.querySelectorAll('.h-cond-chip').forEach(b => b.classList.remove('activo'));
+  el.classList.add('activo');
+  renderHistorial();
+}
+
+function setHTipo(valor, el) {
+  hFiltros.tipo = valor;
+  document.querySelectorAll('.h-tipo-chip').forEach(b => b.classList.remove('activo'));
+  el.classList.add('activo');
+  renderHistorial();
+}
+
+function aplicarQuickFecha(modo) {
+  document.querySelectorAll('.hist-quick').forEach(b => b.classList.remove('activo'));
+  document.getElementById('h-quick-' + modo).classList.add('activo');
+  const hoy = hoyKey();
+  if      (modo === 'hoy')    { hFiltros.fechaDesde = hoy;            hFiltros.fechaHasta = hoy; }
+  else if (modo === 'ayer')   { hFiltros.fechaDesde = fechaOffset(-1); hFiltros.fechaHasta = fechaOffset(-1); }
+  else if (modo === 'semana') { hFiltros.fechaDesde = fechaOffset(-6); hFiltros.fechaHasta = hoy; }
+  else                        { hFiltros.fechaDesde = '';              hFiltros.fechaHasta = ''; }
+  document.getElementById('h-fecha-desde').value = hFiltros.fechaDesde;
+  document.getElementById('h-fecha-hasta').value = hFiltros.fechaHasta;
+  renderHistorial();
+}
+
+function quitarQuickActivo() {
+  document.querySelectorAll('.hist-quick').forEach(b => b.classList.remove('activo'));
+}
+
+function toggleOrden() {
+  hFiltros.orden = hFiltros.orden === 'desc' ? 'asc' : 'desc';
+  document.getElementById('h-orden-btn').textContent =
+    hFiltros.orden === 'desc' ? '↓ Más reciente' : '↑ Más antiguo';
+  renderHistorial();
+}
+
+function renderHistorial() {
+  let regs = todosRegistros.slice();
+  if (hFiltros.conductor !== 'todos') regs = regs.filter(r => r.conductor.trim() === hFiltros.conductor);
+  if (hFiltros.fechaDesde)            regs = regs.filter(r => String(r.fecha).slice(0,10) >= hFiltros.fechaDesde);
+  if (hFiltros.fechaHasta)            regs = regs.filter(r => String(r.fecha).slice(0,10) <= hFiltros.fechaHasta);
+  if (hFiltros.tipo !== 'todos')      regs = regs.filter(r => r.tipo === hFiltros.tipo);
+
+  regs.sort((a, b) => {
+    const cmp = a.timestamp.localeCompare(b.timestamp);
+    return hFiltros.orden === 'desc' ? -cmp : cmp;
+  });
+
+  const lista = document.getElementById('h-lista');
+  document.getElementById('h-contador').textContent =
+    `${regs.length} registro${regs.length !== 1 ? 's' : ''} encontrado${regs.length !== 1 ? 's' : ''}`;
+
+  lista.innerHTML = '';
+  if (regs.length === 0) {
+    lista.innerHTML = `<div class="sin-registros" style="padding:40px 0;">Sin registros para los filtros seleccionados.</div>`;
+    return;
+  }
+
+  let fechaActual = null;
+  regs.forEach(r => {
+    const fechaR = String(r.fecha).slice(0,10);
+    if (fechaR !== fechaActual) {
+      fechaActual = fechaR;
+      const sep = document.createElement('div');
+      sep.style.cssText = 'font-size:11px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:1px;padding:8px 2px 4px;';
+      const [y, m, d] = fechaR.split('-');
+      const fechaD = new Date(Number(y), Number(m)-1, Number(d));
+      const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+      sep.textContent = `${dias[fechaD.getDay()]} ${parseInt(d)} ${MESES_CORTOS[parseInt(m)-1]} ${y}`;
+      lista.appendChild(sep);
+    }
+    lista.appendChild(crearFilaHistorial(r));
+  });
+}
+
+function crearFilaHistorial(r) {
+  const cfg = TIPO_CONFIG[r.tipo] || { clase: 'otro', icono: '⚫' };
+  const d = new Date(r.timestamp);
+  const hora = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const fechaR = String(r.fecha).slice(0,10);
+  const [, m, dia] = fechaR.split('-');
+  const fechaCorta = `${parseInt(dia)} ${MESES_CORTOS[parseInt(m)-1]}`;
+
+  const div = document.createElement('div');
+  div.className = 'hist-fila';
+  div.innerHTML = `
+    <div class="hist-fila-icono ${cfg.clase}">${cfg.icono}</div>
+    <div class="hist-fila-cuerpo">
+      <div class="hist-fila-tipo ${cfg.clase}">${esc(r.tipo)}</div>
+      <div class="hist-fila-conductor">
+        ${esc(r.conductor.trim())}
+        <span class="hist-fila-placa">${esc(r.placa)}</span>
+      </div>
+      <div class="hist-fila-nota">${esc(r.nota)}</div>
+      ${r.lat ? `<div class="hist-fila-gps">📍 <a href="https://www.google.com/maps?q=${r.lat},${r.lng}" target="_blank" style="color:#2e7d32;">Ver en mapa</a></div>` : ''}
+    </div>
+    <div class="hist-fila-meta">
+      <div class="hist-fila-hora">${hora}</div>
+      <div class="hist-fila-fecha">${fechaCorta}</div>
+    </div>`;
+  return div;
+}
+
+// ══════════════════════════════════════════
+// INFORMES EXCEL
+// ══════════════════════════════════════════
+const xFiltros = { desde: '', hasta: '' };
+
+function xInicializar() {
+  const hoy = hoyKey();
+  xFiltros.desde = hoy;
+  xFiltros.hasta = hoy;
+  document.getElementById('x-desde').value = hoy;
+  document.getElementById('x-hasta').value = hoy;
+  document.querySelectorAll('.inf-quick').forEach(b => b.classList.remove('activo'));
+  document.getElementById('xq-hoy').classList.add('activo');
+  actualizarPreviewExcel();
+}
+
+function excelQuick(modo) {
+  document.querySelectorAll('.inf-quick').forEach(b => b.classList.remove('activo'));
+  document.getElementById('xq-' + modo).classList.add('activo');
+  const hoy  = hoyKey();
+  const ahora = new Date();
+  if      (modo === 'hoy')    { xFiltros.desde = hoy;                                                     xFiltros.hasta = hoy; }
+  else if (modo === 'ayer')   { xFiltros.desde = fechaOffset(-1);                                          xFiltros.hasta = fechaOffset(-1); }
+  else if (modo === 'semana') { xFiltros.desde = fechaOffset(-6);                                          xFiltros.hasta = hoy; }
+  else if (modo === 'mes')    { xFiltros.desde = `${ahora.getFullYear()}-${pad(ahora.getMonth()+1)}-01`;   xFiltros.hasta = hoy; }
+  else if (modo === 'todo')   { xFiltros.desde = '';                                                       xFiltros.hasta = ''; }
+  document.getElementById('x-desde').value = xFiltros.desde;
+  document.getElementById('x-hasta').value = xFiltros.hasta;
+  actualizarPreviewExcel();
+}
+
+function excelQuitarQuick() {
+  document.querySelectorAll('.inf-quick').forEach(b => b.classList.remove('activo'));
+}
+
+function registrosEnRango() {
+  let regs = todosRegistros.slice();
+  if (xFiltros.desde) regs = regs.filter(r => String(r.fecha).slice(0,10) >= xFiltros.desde);
+  if (xFiltros.hasta) regs = regs.filter(r => String(r.fecha).slice(0,10) <= xFiltros.hasta);
+  return regs.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+}
+
+function actualizarPreviewExcel() {
+  const regs = registrosEnRango();
+  const preview = document.getElementById('x-preview');
+  const btn = document.getElementById('btn-descargar');
+  if (regs.length === 0) {
+    preview.className = 'inf-preview vacio';
+    preview.textContent = 'Sin registros en el período seleccionado.';
+    btn.disabled = true;
+  } else {
+    preview.className = 'inf-preview';
+    const conductores = new Set(regs.map(r => r.conductor.trim())).size;
+    preview.textContent = `✓ ${regs.length} registro${regs.length !== 1 ? 's' : ''} de ${conductores} conductor${conductores !== 1 ? 'es' : ''}`;
+    btn.disabled = false;
+  }
+}
+
+function descargarExcel() {
+  const regs = registrosEnRango();
+  if (!regs.length) return;
+
+  const wb = XLSX.utils.book_new();
+
+  // Hoja 1 — Registros
+  const cab1 = [['Fecha','Hora','Conductor','Placa','Tipo de registro','Nota','Latitud','Longitud','Link mapa']];
+  const filas1 = regs.map(r => {
+    const d    = new Date(r.timestamp);
+    const hora = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return [
+      String(r.fecha).slice(0,10), hora,
+      r.conductor.trim(), r.placa, r.tipo, r.nota,
+      r.lat ? Number(r.lat) : '',
+      r.lng ? Number(r.lng) : '',
+      r.lat ? `https://www.google.com/maps?q=${r.lat},${r.lng}` : '',
+    ];
+  });
+  const ws1 = XLSX.utils.aoa_to_sheet([...cab1, ...filas1]);
+  ws1['!cols'] = [{wch:12},{wch:7},{wch:30},{wch:8},{wch:20},{wch:45},{wch:12},{wch:12},{wch:50}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Registros');
+
+  // Hoja 2 — Resumen por conductor
+  const porConductor = {};
+  regs.forEach(r => {
+    const nombre = r.conductor.trim();
+    const fecha  = String(r.fecha).slice(0,10);
+    if (!porConductor[nombre])        porConductor[nombre] = {};
+    if (!porConductor[nombre][fecha]) porConductor[nombre][fecha] = [];
+    porConductor[nombre][fecha].push(r);
+  });
+
+  const promedioHHMM = arr => {
+    if (!arr.length) return '—';
+    const avg = Math.round(arr.reduce((a,b) => a+b, 0) / arr.length);
+    return `${pad(Math.floor(avg/60))}:${pad(avg%60)}`;
+  };
+
+  const calcularFila = (nombre, placa, diasObj) => {
+    const dias = Object.keys(diasObj);
+    if (!dias.length) return [nombre, placa, 0, '—', '—', 0, '—'];
+    let mInicio = [], mFin = [], paradas = 0, minsTrab = 0;
+    dias.forEach(fecha => {
+      const rd  = diasObj[fecha];
+      const ini = rd.find(r => r.tipo === 'Inicio jornada');
+      const fin = rd.find(r => r.tipo === 'Fin jornada');
+      paradas += rd.filter(r => r.tipo === 'Llegada a parada').length;
+      if (ini) { const d2 = new Date(ini.timestamp); mInicio.push(d2.getHours()*60 + d2.getMinutes()); }
+      if (fin) { const d2 = new Date(fin.timestamp);  mFin.push(d2.getHours()*60 + d2.getMinutes()); }
+      if (ini && fin) {
+        const diff = Math.round((new Date(fin.timestamp) - new Date(ini.timestamp)) / 60000);
+        if (diff > 0) minsTrab += diff;
+      }
+    });
+    const totalHoras = minsTrab > 0 ? `${Math.floor(minsTrab/60)}h ${minsTrab%60}m` : '—';
+    return [nombre, placa, dias.length, promedioHHMM(mInicio), promedioHHMM(mFin), paradas, totalHoras];
+  };
+
+  const cab2 = [['Conductor','Placa','Días trabajados','Prom. hora inicio','Prom. hora fin','Total paradas (llegadas)','Total horas trabajadas']];
+  const filas2 = CONDUCTORES_FIJOS.map(c => calcularFila(c.nombre.trim(), c.placa, porConductor[c.nombre.trim()] || {}));
+
+  // Conductores históricos
+  const nombresEnFijos = new Set(CONDUCTORES_FIJOS.map(c => c.nombre.trim()));
+  Object.keys(porConductor).sort().forEach(nombre => {
+    if (!nombresEnFijos.has(nombre)) {
+      const primeraFecha = Object.keys(porConductor[nombre])[0];
+      const placa = porConductor[nombre][primeraFecha][0].placa;
+      filas2.push(calcularFila(nombre, placa, porConductor[nombre]));
+    }
+  });
+
+  const ws2 = XLSX.utils.aoa_to_sheet([...cab2, ...filas2]);
+  ws2['!cols'] = [{wch:32},{wch:8},{wch:16},{wch:18},{wch:16},{wch:24},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Resumen por conductor');
+
+  const desde = xFiltros.desde || 'inicio';
+  const hasta = xFiltros.hasta || hoyKey();
+  XLSX.writeFile(wb, `Informe_BavariaxUnion_${desde}_al_${hasta}.xlsx`);
+}
+
+// ══════════════════════════════════════════
+// ARRANQUE
+// ══════════════════════════════════════════
+(function init() {
+  const ahora = new Date();
+  document.getElementById('header-fecha').textContent = fechaLarga(ahora);
+  cargar().then(() => initHistorial());
+})();
+</script>
+</body>
+</html>
