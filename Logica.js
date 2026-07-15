@@ -6,7 +6,7 @@
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybeK--ANSECbaOHO4sspV3111fnO5ya5xCi5qiqhpx8K_8nI6W1xZloBToZhTDbOkAEQ/exec';
 
 const STORAGE_KEY = 'jvk_checkins_registros';
-const SESION_KEY = 'jvk_sesion_actual';
+const SESION_KEY = 'bxua_sesion';
 
 // ⚠️ Clave de admin: cámbiala por la que quieras usar.
 // Esto es solo una barrera simple para evitar que los conductores
@@ -40,12 +40,17 @@ function restaurarSesion() {
   try {
     const raw = sessionStorage.getItem(SESION_KEY);
     if (raw) {
-      const datos = JSON.parse(raw);
-      // Validar que el rol sea uno de los permitidos
-      if (datos.rol === 'conductor' || datos.rol === 'admin') {
+      const datos = JSON.parse(raw);    // sesion activa - directo al panel admin
+      if (datos.rol === 'admin') {
+        sesion = datos;
+        window.location.href = 'admin.html';
+        return;
+      } 
+      if(datos.rol === 'conductor'){
         sesion = datos;
         entrarConSesion();
-      } else {
+      }
+      else {
         sessionStorage.removeItem(SESION_KEY);
       }
     }
@@ -82,13 +87,14 @@ function inicializarLogin() {
         return;
       }
       sesion = { rol: 'admin', nombre: 'Coordinación' };
-    } else {
+      sessionStorage.setItem(SESION_KEY,JSON.stringify(sesion));
+      window.location.href = 'admin.html';
+      return;
+    } 
       sesion = { rol: 'conductor', nombre: datosElegidos.nombre, placa: datosElegidos.placa };
-    }
-
-    sessionStorage.setItem(SESION_KEY, JSON.stringify(sesion));
+      sessionStorage.setItem(SESION_KEY, JSON.stringify(sesion));
     entrarConSesion();
-  });
+  })
 }
 
 function entrarConSesion() {
