@@ -1,0 +1,17 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno / secretos
+.env
+.env.local
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Configuración local de herramientas (no forma parte del proyecto)
+.claude/settings.local.json
