@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel de Administración — BavariaxUnionAndina</title>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -455,6 +457,24 @@ body {
 /* ══════════════════════════════════════════
    SECCIÓN INFORMES EXCEL
 ══════════════════════════════════════════ */
+.inf-charts-card {
+  background: var(--white); border-radius: 20px;
+  max-width: 720px; margin: 0 auto 20px;
+  overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  padding: 20px 24px;
+}
+.inf-charts-hd {
+  font-size: 13px; font-weight: 800; color: var(--dark);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.inf-charts-hd::before {
+  content: ''; display: inline-block;
+  width: 4px; height: 16px; background: var(--green2); border-radius: 2px;
+}
+.inf-chart-box { margin-bottom: 22px; }
+.inf-chart-box:last-child { margin-bottom: 0; }
+.inf-chart-box-title { font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+
 .inf-card {
   background: var(--white); border-radius: 20px;
   max-width: 520px; margin: 0 auto;
@@ -830,6 +850,11 @@ body {
   <!-- Logo Unión Andina (derecha) — colores originales -->
   <img src="images/Unionandina.png" alt="Unión Andina" class="hdr-logo hdr-logo-ua">
 
+  <button class="btn btn-outline" onclick="cerrarSesionAdmin()" style="flex-shrink:0;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    Cerrar sesión
+  </button>
+
 </header>
 
 <!-- ══════════════════════════════════════════
@@ -932,6 +957,18 @@ body {
 ══════════════════════════════════════════ -->
 <section class="seccion" id="sec-informes">
 
+  <div class="inf-charts-card">
+    <div class="inf-charts-hd">Análisis del período seleccionado</div>
+    <div class="inf-chart-box">
+      <div class="inf-chart-box-title">Horas trabajadas por conductor</div>
+      <canvas id="chart-horas-conductor" height="220"></canvas>
+    </div>
+    <div class="inf-chart-box">
+      <div class="inf-chart-box-title">Registros por día</div>
+      <canvas id="chart-registros-dia" height="220"></canvas>
+    </div>
+  </div>
+
   <div class="inf-card">
     <div class="inf-hd">
       <div class="inf-hd-icono">📊</div>
@@ -957,10 +994,10 @@ body {
         <div class="inf-label">Rango personalizado</div>
         <div class="inf-fechas">
           <input type="date" class="inf-date-input" id="x-desde"
-                 onchange="xFiltros.desde=this.value; excelQuitarQuick(); actualizarPreviewExcel();">
+                 onchange="xFiltros.desde=this.value; excelQuitarQuick(); actualizarPreviewExcel(); renderCharts();">
           <span class="inf-sep">→</span>
           <input type="date" class="inf-date-input" id="x-hasta"
-                 onchange="xFiltros.hasta=this.value; excelQuitarQuick(); actualizarPreviewExcel();">
+                 onchange="xFiltros.hasta=this.value; excelQuitarQuick(); actualizarPreviewExcel(); renderCharts();">
         </div>
       </div>
 
@@ -972,8 +1009,10 @@ body {
       <div class="inf-grupo">
         <div class="inf-label">Contenido del archivo</div>
         <div class="inf-desc">
-          <strong>Hoja 1 — Registros:</strong> Fecha, hora, conductor, placa, tipo de registro, nota y GPS de cada evento.<br>
-          <strong>Hoja 2 — Resumen por conductor:</strong> Días trabajados, hora promedio de inicio/fin, total de paradas y horas trabajadas por conductor.
+          <strong>Dashboard:</strong> Resumen general, conductor estrella del período, registros por tipo y detalle por conductor — con gráfico de barras de horas trabajadas.<br>
+          <strong>Registros:</strong> Fecha, hora, conductor, placa, tipo de registro, nota y GPS de cada evento — ordenado por fecha y conductor, coloreado por tipo de registro.<br>
+          <strong>Resumen por conductor:</strong> Días trabajados, hora promedio de inicio/fin, paradas, horas totales y horas promedio por día trabajado, separado por conductor y placa.<br>
+          Encabezados en rojo, filas alternas, bordes, columnas ajustadas y encabezado congelado en las tres hojas.
         </div>
       </div>
     </div>
@@ -1064,18 +1103,28 @@ body {
 
 <script>
 // ══════════════════════════════════════════
-// GUARDIÁN DE ACCESO — verifica sesión admin
+// PROTECCIÓN DE SESIÓN
 // ══════════════════════════════════════════
-const SESION_KEY = 'bxua_sesion'; //mismo valor exacto que en Logica.js
-
-(function verificarAcceso() {
+// admin.html es una página independiente (no carga Logica.js), así que
+// repite aquí la misma clave de sessionStorage que usa index.html tras
+// el login. Sin una sesión de admin válida, redirige al login y no
+// carga nada más de este script (ni datos ni el panel).
+(function protegerAcceso() {
   try {
-    const s = JSON.parse(sessionStorage.getItem(SESION_KEY));
-    if (!s || s.rol !== 'admin') throw new Error();
-  }catch(_) {
-    window.location.replace('index.html');
-  }
+    const raw = sessionStorage.getItem('jvk_sesion_actual');
+    const datos = raw ? JSON.parse(raw) : null;
+    if (datos && datos.rol === 'admin') return;
+  } catch (e) {}
+  window.location.href = 'index.html';
+  throw new Error('Sin sesión de admin válida — redirigiendo a index.html');
 })();
+
+// Botón "Cerrar sesión" del header: borra la sesión y vuelve al login
+function cerrarSesionAdmin() {
+  sessionStorage.removeItem('jvk_sesion_actual');
+  window.location.href = 'index.html';
+}
+
 // ══════════════════════════════════════════
 // CONFIGURACIÓN
 // ══════════════════════════════════════════
@@ -1097,6 +1146,7 @@ let CONDUCTORES_FIJOS = (function() {
   return CONDUCTORES_DEFAULT.slice();
 })();
 
+// Aspecto visual (clase CSS + icono) de cada tipo de evento — usado en tarjetas, historial y WhatsApp
 const TIPO_CONFIG = {
   'Inicio jornada':   { clase: 'inicio',  icono: '🟢' },
   'Llegada a parada': { clase: 'llegada', icono: '📍' },
@@ -1104,36 +1154,54 @@ const TIPO_CONFIG = {
   'Fin jornada':      { clase: 'fin',     icono: '🔴' },
 };
 
+// Insignia de estado de jornada mostrada en el pie de cada tarjeta del dashboard
+const TARJETA_BADGE_HTML = {
+  completa: '<span class="badge badge-completa">✓ Jornada completa</span>',
+  ruta:     '<span class="badge badge-sin-fin">En ruta</span>',
+  parcial:  '<span class="badge badge-parcial">Sin inicio</span>',
+  sin:      '<span class="badge badge-parcial">Sin inicio</span>',
+};
+
+// Icono de WhatsApp reutilizado por los botones "Copiar para WhatsApp" del dashboard y del modal resumen
+const WA_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.555 4.116 1.528 5.845L.057 23.943l6.262-1.642A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 01-5.003-1.367l-.358-.213-3.716.975.992-3.624-.234-.372A9.797 9.797 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>`;
+
+// Estado global cargado desde Google Sheets y filtro activo del dashboard del día
 let todosRegistros = [];
 let filtroActivo   = 'todos';
 
 // ══════════════════════════════════════════
 // UTILIDADES
 // ══════════════════════════════════════════
+// Rellena un número con un cero a la izquierda (7 → "07")
 function pad(n) { return String(n).padStart(2, '0'); }
 
+// Fecha de hoy en formato "YYYY-MM-DD", usado como clave para filtrar por día
 function hoyKey() {
   const h = new Date();
   return `${h.getFullYear()}-${pad(h.getMonth()+1)}-${pad(h.getDate())}`;
 }
 
+// Fecha "YYYY-MM-DD" desplazada N días respecto a hoy (negativo = hacia atrás)
 function fechaOffset(dias) {
   const d = new Date();
   d.setDate(d.getDate() + dias);
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
 
+// Hora "HH:MM" a partir de un timestamp ISO
 function horaDesdeTimestamp(ts) {
   const d = new Date(ts);
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Escapa texto para insertarlo de forma segura dentro de innerHTML (evita inyección de HTML)
 function esc(s) {
   const d = document.createElement('div');
   d.textContent = String(s || '');
   return d.innerHTML;
 }
 
+// Fecha completa en español, ej: "Sábado, 18 de julio de 2026"
 function fechaLarga(fecha) {
   const dias  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
@@ -1141,15 +1209,18 @@ function fechaLarga(fecha) {
   return `${dias[fecha.getDay()]}, ${fecha.getDate()} de ${meses[fecha.getMonth()]} de ${fecha.getFullYear()}`;
 }
 
+// Nombres de mes abreviados, usados en el historial ("15 jul")
 const MESES_CORTOS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 
 // ══════════════════════════════════════════
 // CONDUCTORES — gestión y persistencia
 // ══════════════════════════════════════════
+// Persiste la lista de conductores fijos en localStorage
 function guardarConductores() {
   localStorage.setItem('bxua_conductores', JSON.stringify(CONDUCTORES_FIJOS));
 }
 
+// Dibuja la lista de conductores fijos en la pestaña "Conductores"
 function renderConductores() {
   const lista = document.getElementById('cond-lista');
   const count = document.getElementById('cond-count');
@@ -1171,6 +1242,7 @@ function renderConductores() {
     </div>`).join('');
 }
 
+// Valida y agrega un nuevo conductor fijo desde el formulario
 function agregarConductor() {
   const nombreEl = document.getElementById('cond-nombre');
   const placaEl  = document.getElementById('cond-placa');
@@ -1193,6 +1265,7 @@ function agregarConductor() {
   nombreEl.focus();
 }
 
+// Pide confirmación y elimina un conductor fijo de la lista
 function eliminarConductor(idx) {
   const c = CONDUCTORES_FIJOS[idx];
   if (!c) return;
@@ -1206,6 +1279,7 @@ function eliminarConductor(idx) {
 // ══════════════════════════════════════════
 // NAVEGACIÓN
 // ══════════════════════════════════════════
+// Muestra la pestaña `sec` y oculta las demás; refresca el contenido de la pestaña recién activada
 function cambiarSeccion(sec) {
   ['dashboard','historial','informes','conductores'].forEach(s => {
     document.getElementById('sec-' + s).classList.toggle('activo', s === sec);
@@ -1219,6 +1293,7 @@ function cambiarSeccion(sec) {
 // ══════════════════════════════════════════
 // CARGA DE DATOS
 // ══════════════════════════════════════════
+// Descarga todos los registros desde Google Sheets (Apps Script) y dibuja el dashboard del día
 async function cargar() {
   document.getElementById('contenido').innerHTML =
     `<div class="estado-carga"><div class="spinner"></div>Cargando registros...</div>`;
@@ -1243,6 +1318,18 @@ async function cargar() {
 // ══════════════════════════════════════════
 // DASHBOARD — FILTROS Y TARJETAS
 // ══════════════════════════════════════════
+// Agrupa una lista de registros por nombre de conductor: { "JUAN PEREZ": [reg, reg, ...], ... }
+function agruparRegistrosPorConductor(regs) {
+  const porConductor = {};
+  regs.forEach(r => {
+    const nombre = r.conductor.trim();
+    if (!porConductor[nombre]) porConductor[nombre] = [];
+    porConductor[nombre].push(r);
+  });
+  return porConductor;
+}
+
+// Dibuja los botones de filtro por conductor (solo los que tuvieron actividad hoy)
 function renderFiltros() {
   const hoy = hoyKey();
   const activos = new Set(
@@ -1267,15 +1354,11 @@ function renderFiltros() {
   });
 }
 
+// Dibuja las tarjetas de los conductores con actividad hoy, y una lista aparte de los que no la tuvieron
 function renderTarjetas() {
   const hoy = hoyKey();
   const registrosHoy = todosRegistros.filter(r => String(r.fecha).slice(0,10) === hoy);
-  const porConductor = {};
-  registrosHoy.forEach(r => {
-    const nombre = r.conductor.trim();
-    if (!porConductor[nombre]) porConductor[nombre] = [];
-    porConductor[nombre].push(r);
-  });
+  const porConductor = agruparRegistrosPorConductor(registrosHoy);
 
   let conductoresActivos, conductoresInactivos;
   if (filtroActivo === 'todos') {
@@ -1317,31 +1400,12 @@ function renderTarjetas() {
   }
 }
 
-function datosCondutor(nombre, porConductor) {
-  const regs = (porConductor[nombre.trim()] || [])
-    .slice().sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-  const inicio  = regs.find(r => r.tipo === 'Inicio jornada');
-  const fin     = regs.find(r => r.tipo === 'Fin jornada');
-  const paradas = regs.filter(r => r.tipo === 'Llegada a parada' || r.tipo === 'Salida de parada');
-
-  let duracion = '—';
-  if (inicio && fin) {
-    const mins = Math.round((new Date(fin.timestamp) - new Date(inicio.timestamp)) / 60000);
-    duracion = `${Math.floor(mins/60)}h ${mins%60}m`;
-  }
-
-  let estadoKey = 'sin';
-  if (inicio && fin)      estadoKey = 'completa';
-  else if (inicio)        estadoKey = 'ruta';
-  else if (regs.length)   estadoKey = 'parcial';
-
-  return { regs, inicio, fin, paradas, duracion, estadoKey };
-}
-
-function crearTarjeta(conductor, registros) {
-  const inicio  = registros.find(r => r.tipo === 'Inicio jornada');
-  const fin     = registros.find(r => r.tipo === 'Fin jornada');
-  const paradas = registros.filter(r => r.tipo === 'Llegada a parada' || r.tipo === 'Salida de parada');
+// A partir de los registros (ya ordenados) de UN conductor, calcula inicio, fin, paradas,
+// duración formateada ("Xh Ym") y una clave de estado: completa / ruta / parcial / sin
+function calcularEstadoJornada(registrosOrdenados) {
+  const inicio  = registrosOrdenados.find(r => r.tipo === 'Inicio jornada');
+  const fin     = registrosOrdenados.find(r => r.tipo === 'Fin jornada');
+  const paradas = registrosOrdenados.filter(r => r.tipo === 'Llegada a parada' || r.tipo === 'Salida de parada');
 
   let duracionTxt = '—';
   if (inicio && fin) {
@@ -1349,10 +1413,25 @@ function crearTarjeta(conductor, registros) {
     duracionTxt = `${Math.floor(mins/60)}h ${mins%60}m`;
   }
 
-  let estadoBadge = '';
-  if (inicio && fin)  estadoBadge = `<span class="badge badge-completa">✓ Jornada completa</span>`;
-  else if (inicio)    estadoBadge = `<span class="badge badge-sin-fin">En ruta</span>`;
-  else                estadoBadge = `<span class="badge badge-parcial">Sin inicio</span>`;
+  let estadoKey = 'sin';
+  if (inicio && fin)                  estadoKey = 'completa';
+  else if (inicio)                    estadoKey = 'ruta';
+  else if (registrosOrdenados.length) estadoKey = 'parcial';
+
+  return { inicio, fin, paradas, duracionTxt, estadoKey };
+}
+
+// Busca, ordena y calcula el estado de jornada de un conductor dentro de un mapa {nombre: registros[]}
+function datosCondutor(nombre, porConductor) {
+  const regs = (porConductor[nombre.trim()] || [])
+    .slice().sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  return { regs, ...calcularEstadoJornada(regs) };
+}
+
+// Construye la tarjeta completa de un conductor: cabecera, resumen, línea de tiempo y botón de WhatsApp
+function crearTarjeta(conductor, registros) {
+  const { inicio, fin, paradas, duracionTxt, estadoKey } = calcularEstadoJornada(registros);
+  const estadoBadge = TARJETA_BADGE_HTML[estadoKey];
 
   const card = document.createElement('div');
   card.className = 'tarjeta';
@@ -1400,7 +1479,7 @@ function crearTarjeta(conductor, registros) {
 
   const btnWa = document.createElement('button');
   btnWa.className = 'btn-whatsapp';
-  btnWa.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.555 4.116 1.528 5.845L.057 23.943l6.262-1.642A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 01-5.003-1.367l-.358-.213-3.716.975.992-3.624-.234-.372A9.797 9.797 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>Copiar para WhatsApp`;
+  btnWa.innerHTML = `${WA_SVG}Copiar para WhatsApp`;
   btnWa.onclick = () => copiarWhatsAppIndividual(conductor, registros, duracionTxt, btnWa);
   card.appendChild(btnWa);
 
@@ -1414,6 +1493,7 @@ function crearTarjeta(conductor, registros) {
   return card;
 }
 
+// Tarjeta atenuada para un conductor fijo que no ha tenido actividad hoy
 function crearTarjetaInactivo(conductor) {
   const div = document.createElement('div');
   div.className = 'conductor-inactivo';
@@ -1429,27 +1509,26 @@ function crearTarjetaInactivo(conductor) {
 // ══════════════════════════════════════════
 // MODAL RESUMEN GENERAL
 // ══════════════════════════════════════════
-const WA_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.555 4.116 1.528 5.845L.057 23.943l6.262-1.642A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 01-5.003-1.367l-.358-.213-3.716.975.992-3.624-.234-.372A9.797 9.797 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>`;
+// Cuenta cuántos conductores fijos caen en cada estado: jornada completa, en ruta (incluye "parcial") o sin actividad
+function contarEstadosConductores(porConductor) {
+  let completas = 0, ruta = 0, sin = 0;
+  CONDUCTORES_FIJOS.forEach(c => {
+    const estadoKey = datosCondutor(c.nombre, porConductor).estadoKey;
+    if      (estadoKey === 'completa')                          completas++;
+    else if (estadoKey === 'ruta' || estadoKey === 'parcial')    ruta++;
+    else                                                         sin++;
+  });
+  return { completas, ruta, sin };
+}
 
+// Abre el modal con la tabla resumen de todos los conductores fijos del día
 function abrirResumenGeneral() {
   const hoy = hoyKey();
   const ahora = new Date();
   const registrosHoy = todosRegistros.filter(r => String(r.fecha).slice(0,10) === hoy);
 
-  const porConductor = {};
-  registrosHoy.forEach(r => {
-    const nombre = r.conductor.trim();
-    if (!porConductor[nombre]) porConductor[nombre] = [];
-    porConductor[nombre].push(r);
-  });
-
-  let nCompletas = 0, nRuta = 0, nSin = 0;
-  CONDUCTORES_FIJOS.forEach(c => {
-    const d = datosCondutor(c.nombre, porConductor);
-    if      (d.estadoKey === 'completa')                         nCompletas++;
-    else if (d.estadoKey === 'ruta' || d.estadoKey === 'parcial') nRuta++;
-    else                                                          nSin++;
-  });
+  const porConductor = agruparRegistrosPorConductor(registrosHoy);
+  const { completas: nCompletas, ruta: nRuta, sin: nSin } = contarEstadosConductores(porConductor);
 
   document.getElementById('modal-fecha').textContent =
     `${fechaLarga(ahora)} — ${pad(ahora.getHours())}:${pad(ahora.getMinutes())}`;
@@ -1492,30 +1571,22 @@ function abrirResumenGeneral() {
   document.getElementById('modal-resumen').classList.add('activo');
 }
 
+// Cierra el modal de resumen general
 function cerrarModal() { document.getElementById('modal-resumen').classList.remove('activo'); }
+// Cierra el modal solo si el clic fue sobre el fondo oscuro, no sobre la tarjeta
 function cerrarModalSiOverlay(e) { if (e.target === document.getElementById('modal-resumen')) cerrarModal(); }
 
+// Arma el texto del resumen general del día y lo copia al portapapeles, listo para pegar en WhatsApp
 function copiarResumenGeneral() {
   const hoy = hoyKey();
   const ahora = new Date();
   const registrosHoy = todosRegistros.filter(r => String(r.fecha).slice(0,10) === hoy);
-  const porConductor = {};
-  registrosHoy.forEach(r => {
-    const nombre = r.conductor.trim();
-    if (!porConductor[nombre]) porConductor[nombre] = [];
-    porConductor[nombre].push(r);
-  });
+  const porConductor = agruparRegistrosPorConductor(registrosHoy);
 
   const ICONOS  = { completa: '✅', ruta: '🔄', parcial: '⚠️', sin: '💤' };
   const TEXTOS  = { completa: 'Jornada completa', ruta: 'En ruta', parcial: 'Sin inicio registrado', sin: 'Sin actividad' };
 
-  let nCompletas = 0, nRuta = 0, nSin = 0;
-  CONDUCTORES_FIJOS.forEach(c => {
-    const d = datosCondutor(c.nombre, porConductor);
-    if      (d.estadoKey === 'completa')                         nCompletas++;
-    else if (d.estadoKey === 'ruta' || d.estadoKey === 'parcial') nRuta++;
-    else                                                          nSin++;
-  });
+  const { completas: nCompletas, ruta: nRuta, sin: nSin } = contarEstadosConductores(porConductor);
 
   const L = [];
   L.push(`🚛 *BavariaxUnionAndina — Resumen del día*`);
@@ -1555,28 +1626,31 @@ function copiarResumenGeneral() {
   });
 }
 
+// Textos de estado usados solo en el mensaje de WhatsApp de una tarjeta individual
+const ESTADO_WA_TXT = {
+  completa: '✅ Jornada completa',
+  ruta:     '🔄 En ruta',
+  parcial:  '⚠️ Sin inicio registrado',
+  sin:      '⚠️ Sin inicio registrado',
+};
+
+// Arma el mensaje de WhatsApp con la jornada de un conductor y lo copia al portapapeles
 function copiarWhatsAppIndividual(conductor, registros, duracionTxt, btn) {
-  const ICONOS_TIPO = {
-    'Inicio jornada': '🟢', 'Llegada a parada': '📍',
-    'Salida de parada': '🚌', 'Fin jornada': '🔴',
-  };
-  const inicio  = registros.find(r => r.tipo === 'Inicio jornada');
-  const fin     = registros.find(r => r.tipo === 'Fin jornada');
-  const paradas = registros.filter(r => r.tipo === 'Llegada a parada' || r.tipo === 'Salida de parada');
-  const estado  = inicio && fin ? '✅ Jornada completa' : inicio ? '🔄 En ruta' : '⚠️ Sin inicio registrado';
+  const { paradas, estadoKey } = calcularEstadoJornada(registros);
 
   const L = [];
   L.push(`🚛 *${conductor.nombre} — ${conductor.placa}*`);
   L.push(`📅 ${fechaLarga(new Date())}`);
   L.push('');
   registros.forEach(r => {
-    L.push(`${ICONOS_TIPO[r.tipo] || '⚫'} *${r.tipo}* — ${horaDesdeTimestamp(r.timestamp)}`);
+    const icono = (TIPO_CONFIG[r.tipo] || { icono: '⚫' }).icono;
+    L.push(`${icono} *${r.tipo}* — ${horaDesdeTimestamp(r.timestamp)}`);
     L.push(`   ${r.nota}`);
     if (r.lat) L.push(`   📍 https://www.google.com/maps?q=${r.lat},${r.lng}`);
     L.push('');
   });
   L.push(`⏱ Duración: ${duracionTxt} · ${paradas.length} parada${paradas.length !== 1 ? 's' : ''}`);
-  L.push(estado);
+  L.push(ESTADO_WA_TXT[estadoKey]);
   L.push('');
   L.push('_BavariaxUnionAndina_');
 
@@ -1604,6 +1678,7 @@ function copiarWhatsAppIndividual(conductor, registros, duracionTxt, btn) {
 // ══════════════════════════════════════════
 const hFiltros = { conductor: 'todos', fechaDesde: '', fechaHasta: '', tipo: 'todos', orden: 'desc' };
 
+// Prepara la pestaña Historial: fecha por defecto (hoy) y chips de conductores (fijos + históricos)
 function initHistorial() {
   const hoy = hoyKey();
   hFiltros.fechaDesde = hoy;
@@ -1643,6 +1718,7 @@ function initHistorial() {
   });
 }
 
+// Filtra el historial por conductor y marca el chip seleccionado
 function setHConductor(valor, el) {
   hFiltros.conductor = valor;
   document.querySelectorAll('.h-cond-chip').forEach(b => b.classList.remove('activo'));
@@ -1650,6 +1726,7 @@ function setHConductor(valor, el) {
   renderHistorial();
 }
 
+// Filtra el historial por tipo de evento y marca el chip seleccionado
 function setHTipo(valor, el) {
   hFiltros.tipo = valor;
   document.querySelectorAll('.h-tipo-chip').forEach(b => b.classList.remove('activo'));
@@ -1657,6 +1734,7 @@ function setHTipo(valor, el) {
   renderHistorial();
 }
 
+// Aplica un rango de fecha rápido ("hoy", "ayer", "semana" o "todo") al filtro de historial
 function aplicarQuickFecha(modo) {
   document.querySelectorAll('.hist-quick').forEach(b => b.classList.remove('activo'));
   document.getElementById('h-quick-' + modo).classList.add('activo');
@@ -1670,10 +1748,12 @@ function aplicarQuickFecha(modo) {
   renderHistorial();
 }
 
+// Desmarca los botones de fecha rápida cuando el usuario elige una fecha manual
 function quitarQuickActivo() {
   document.querySelectorAll('.hist-quick').forEach(b => b.classList.remove('activo'));
 }
 
+// Alterna el orden del historial entre más reciente primero y más antiguo primero
 function toggleOrden() {
   hFiltros.orden = hFiltros.orden === 'desc' ? 'asc' : 'desc';
   document.getElementById('h-orden-btn').textContent =
@@ -1681,6 +1761,7 @@ function toggleOrden() {
   renderHistorial();
 }
 
+// Aplica los filtros activos (conductor, fecha, tipo, orden) y dibuja la lista del historial agrupada por día
 function renderHistorial() {
   let regs = todosRegistros.slice();
   if (hFiltros.conductor !== 'todos') regs = regs.filter(r => r.conductor.trim() === hFiltros.conductor);
@@ -1720,6 +1801,7 @@ function renderHistorial() {
   });
 }
 
+// Construye una fila individual de la lista de historial
 function crearFilaHistorial(r) {
   const cfg = TIPO_CONFIG[r.tipo] || { clase: 'otro', icono: '⚫' };
   const d = new Date(r.timestamp);
@@ -1749,10 +1831,11 @@ function crearFilaHistorial(r) {
 }
 
 // ══════════════════════════════════════════
-// INFORMES EXCEL
+// INFORMES EXCEL — filtros y datos
 // ══════════════════════════════════════════
 const xFiltros = { desde: '', hasta: '' };
 
+// Prepara la pestaña Informes al abrirla: rango "Hoy" por defecto, preview y gráficos
 function xInicializar() {
   const hoy = hoyKey();
   xFiltros.desde = hoy;
@@ -1762,8 +1845,10 @@ function xInicializar() {
   document.querySelectorAll('.inf-quick').forEach(b => b.classList.remove('activo'));
   document.getElementById('xq-hoy').classList.add('activo');
   actualizarPreviewExcel();
+  renderCharts();
 }
 
+// Aplica un período rápido (hoy/ayer/semana/mes/todo) al rango de exportación
 function excelQuick(modo) {
   document.querySelectorAll('.inf-quick').forEach(b => b.classList.remove('activo'));
   document.getElementById('xq-' + modo).classList.add('activo');
@@ -1777,12 +1862,15 @@ function excelQuick(modo) {
   document.getElementById('x-desde').value = xFiltros.desde;
   document.getElementById('x-hasta').value = xFiltros.hasta;
   actualizarPreviewExcel();
+  renderCharts();
 }
 
+// Desmarca los períodos rápidos cuando el usuario elige una fecha manual
 function excelQuitarQuick() {
   document.querySelectorAll('.inf-quick').forEach(b => b.classList.remove('activo'));
 }
 
+// Registros dentro del rango de fechas seleccionado, ordenados por fecha/hora
 function registrosEnRango() {
   let regs = todosRegistros.slice();
   if (xFiltros.desde) regs = regs.filter(r => String(r.fecha).slice(0,10) >= xFiltros.desde);
@@ -1790,6 +1878,55 @@ function registrosEnRango() {
   return regs.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 }
 
+// Agrupa registros por fecha bajo una clave (conductor solo, o conductor+placa)
+function agruparPorClave(regs, claveFn) {
+  const grupos = {};
+  regs.forEach(r => {
+    const c = claveFn(r);
+    const fecha = String(r.fecha).slice(0,10);
+    if (!grupos[c.key]) grupos[c.key] = { nombre: c.nombre, placa: c.placa, dias: {} };
+    if (!grupos[c.key].dias[fecha]) grupos[c.key].dias[fecha] = [];
+    grupos[c.key].dias[fecha].push(r);
+  });
+  return grupos;
+}
+
+// A partir de los días trabajados de un conductor, calcula horas de inicio/fin, paradas y horas totales
+function calcularDatosConductor(nombre, placa, diasObj) {
+  const dias = Object.keys(diasObj);
+  let mInicio = [], mFin = [], paradas = 0, minsTrab = 0;
+  dias.forEach(fecha => {
+    const rd  = diasObj[fecha];
+    const ini = rd.find(r => r.tipo === 'Inicio jornada');
+    const fin = rd.find(r => r.tipo === 'Fin jornada');
+    paradas += rd.filter(r => r.tipo === 'Llegada a parada').length;
+    if (ini) { const d2 = new Date(ini.timestamp); mInicio.push(d2.getHours()*60 + d2.getMinutes()); }
+    if (fin) { const d2 = new Date(fin.timestamp);  mFin.push(d2.getHours()*60 + d2.getMinutes()); }
+    if (ini && fin) {
+      const diff = Math.round((new Date(fin.timestamp) - new Date(ini.timestamp)) / 60000);
+      if (diff > 0) minsTrab += diff;
+    }
+  });
+  return {
+    nombre, placa, diasTrabajados: dias.length,
+    mInicio, mFin, paradas, minsTrab,
+    promHorasDiaMin: dias.length ? minsTrab / dias.length : 0,
+  };
+}
+
+// Promedia una lista de minutos-desde-medianoche y la formatea como "HH:MM"
+function promedioHHMM(arr) {
+  if (!arr.length) return '—';
+  const avg = Math.round(arr.reduce((a,b) => a+b, 0) / arr.length);
+  return `${pad(Math.floor(avg/60))}:${pad(avg%60)}`;
+}
+
+// Formatea minutos como texto "Xh Ym"
+function formatoHoras(mins) {
+  return mins > 0 ? `${Math.floor(mins/60)}h ${Math.round(mins%60)}m` : '—';
+}
+
+// Actualiza el mensaje de vista previa ("N registros de M conductores") y habilita/deshabilita el botón de descarga
 function actualizarPreviewExcel() {
   const regs = registrosEnRango();
   const preview = document.getElementById('x-preview');
@@ -1806,85 +1943,514 @@ function actualizarPreviewExcel() {
   }
 }
 
-function descargarExcel() {
+// ══════════════════════════════════════════
+// GRÁFICOS EN PANTALLA (Chart.js)
+// ══════════════════════════════════════════
+let chartHoras = null, chartRegistrosDia = null;
+
+// Dibuja (o redibuja) los gráficos de horas por conductor y registros por día para el rango seleccionado
+function renderCharts() {
+  const canvasH = document.getElementById('chart-horas-conductor');
+  const canvasR = document.getElementById('chart-registros-dia');
+  if (!canvasH || !canvasR || typeof Chart === 'undefined') return;
+
+  const regs = registrosEnRango();
+
+  const gruposNombre = agruparPorClave(regs, r => ({ key: r.conductor.trim(), nombre: r.conductor.trim(), placa: r.placa }));
+  const datosNombre = Object.values(gruposNombre)
+    .map(g => calcularDatosConductor(g.nombre, g.placa, g.dias))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  const porDia = {};
+  regs.forEach(r => { const f = String(r.fecha).slice(0,10); porDia[f] = (porDia[f] || 0) + 1; });
+  const diasOrdenados = Object.keys(porDia).sort();
+
+  if (chartHoras)         chartHoras.destroy();
+  if (chartRegistrosDia)  chartRegistrosDia.destroy();
+
+  chartHoras = new Chart(canvasH, {
+    type: 'bar',
+    data: {
+      labels: datosNombre.map(d => d.nombre.split(' ').slice(0,2).join(' ')),
+      datasets: [{
+        label: 'Horas trabajadas',
+        data: datosNombre.map(d => +(d.minsTrab/60).toFixed(2)),
+        backgroundColor: '#2e7d32',
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, title: { display: true, text: 'Horas' } } },
+    },
+  });
+
+  chartRegistrosDia = new Chart(canvasR, {
+    type: 'line',
+    data: {
+      labels: diasOrdenados,
+      datasets: [{
+        label: 'Registros',
+        data: diasOrdenados.map(f => porDia[f]),
+        borderColor: '#E30613',
+        backgroundColor: 'rgba(227,6,19,0.15)',
+        fill: true,
+        tension: 0.25,
+        pointRadius: 3,
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+    },
+  });
+}
+
+// ══════════════════════════════════════════
+// GENERACIÓN DEL EXCEL — estilos
+// ══════════════════════════════════════════
+// Paleta de colores del informe: encabezados, bandas, título, fila estrella y un color por tipo de evento
+const XLS_ESTILO = {
+  headerFill: 'E30613',
+  headerFont: 'FFFFFF',
+  borderColor: 'D9D9D9',
+  altRowFill: 'F5F5F5',
+  tituloColor: '1A1A2E',
+  estrellaFill: 'C6EFCE',
+  tipoFill: {
+    'Inicio jornada':   'C6EFCE',
+    'Llegada a parada': 'FFEB9C',
+    'Salida de parada': 'F8CBAD',
+    'Fin jornada':      'FFC7CE',
+  },
+};
+
+// Borde fino gris claro en los 4 lados, reutilizado por encabezados y celdas de datos
+function xlsBorde() {
+  const b = { style: 'thin', color: { rgb: XLS_ESTILO.borderColor } };
+  return { top: b, bottom: b, left: b, right: b };
+}
+
+// Estilo de una celda de encabezado: fondo rojo, texto blanco negrita, centrado
+function xlsEstiloEncabezado() {
+  return {
+    fill: { fgColor: { rgb: XLS_ESTILO.headerFill } },
+    font: { color: { rgb: XLS_ESTILO.headerFont }, bold: true, sz: 11 },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    border: xlsBorde(),
+  };
+}
+
+// Estilo de una celda de datos: borde + relleno opcional (banda alterna o color por tipo)
+function xlsEstiloCelda(fillHex, extra) {
+  const s = { border: xlsBorde(), alignment: { vertical: 'center' } };
+  if (fillHex) s.fill = { fgColor: { rgb: fillHex } };
+  return Object.assign(s, extra || {});
+}
+
+// Estilo de los títulos de sección dentro de la hoja Dashboard (negrita, sin relleno)
+function xlsEstiloTitulo() {
+  return { font: { bold: true, sz: 13, color: { rgb: XLS_ESTILO.tituloColor } } };
+}
+
+// Devuelve la celda (r, c) de la hoja, creándola vacía si todavía no existe
+function xlsCelda(ws, r, c, valor) {
+  const addr = XLSX.utils.encode_cell({ r, c });
+  if (!ws[addr]) {
+    const tipo = typeof valor === 'number' ? 'n' : 's';
+    ws[addr] = { t: tipo, v: valor == null ? '' : valor };
+  }
+  return ws[addr];
+}
+
+// Aplica borde + banda alterna gris (o un color por fila indicado por colorFilaFn) a un rango de filas
+function xlsBandearFilas(ws, filaDesde, filaHasta, numCols, colorFilaFn) {
+  for (let r = filaDesde; r <= filaHasta; r++) {
+    const colorExplicito = colorFilaFn && colorFilaFn(r);
+    const fill = colorExplicito || ((r - filaDesde) % 2 === 1 ? XLS_ESTILO.altRowFill : null);
+    for (let c = 0; c < numCols; c++) {
+      xlsCelda(ws, r, c).s = xlsEstiloCelda(fill);
+    }
+  }
+}
+
+// Pinta una fila completa como encabezado (fondo rojo)
+function xlsEncabezarFila(ws, fila, numCols) {
+  for (let c = 0; c < numCols; c++) {
+    xlsCelda(ws, fila, c).s = xlsEstiloEncabezado();
+  }
+}
+
+// Marca la primera celda de una fila como título de sección
+function xlsTitular(ws, fila) {
+  xlsCelda(ws, fila, 0).s = xlsEstiloTitulo();
+}
+
+// Calcula el ancho de cada columna según el contenido más largo, entre un mínimo y un máximo de caracteres
+function xlsAutoAjustarColumnas(aoa, min, max) {
+  min = min || 9; max = max || 55;
+  const cols = aoa.reduce((m, fila) => Math.max(m, fila.length), 0);
+  const anchos = new Array(cols).fill(min);
+  aoa.forEach(fila => {
+    fila.forEach((val, i) => {
+      const len = String(val == null ? '' : val).length + 2;
+      if (len > anchos[i]) anchos[i] = Math.min(len, max);
+    });
+  });
+  return anchos.map(wch => ({ wch }));
+}
+
+// Dispara la descarga de un Blob en el navegador con el nombre de archivo indicado
+function xlsDescargarBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ══════════════════════════════════════════
+// GENERACIÓN DEL EXCEL — post-procesado OOXML
+// (xlsx-js-style no escribe paneles congelados, configuración de página ni gráficos nativos,
+//  así que se editan directamente los XML del .xlsx ya generado, dentro del .zip)
+// ══════════════════════════════════════════
+// Congela la primera fila (encabezados) en todas las hojas del libro
+async function xlsInyectarFreezePanes(zip) {
+  const sheetFiles = Object.keys(zip.files).filter(f => /^xl\/worksheets\/sheet\d+\.xml$/.test(f));
+  for (const path of sheetFiles) {
+    let xml = await zip.file(path).async('string');
+    if (xml.includes('<pane ')) continue;
+    xml = xml.replace(/<sheetView([^>]*?)\/>/, (m, attrs) =>
+      `<sheetView${attrs}><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView>`
+    );
+    zip.file(path, xml);
+  }
+}
+
+// Horizontal + ajustado al ancho de página, para que cada hoja imprima/exporte en una sola página de ancho
+async function xlsInyectarConfigPagina(zip) {
+  const sheetFiles = Object.keys(zip.files).filter(f => /^xl\/worksheets\/sheet\d+\.xml$/.test(f));
+  const pageXml = '<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" fitToWidth="1" fitToHeight="0" orientation="landscape"/>';
+  for (const path of sheetFiles) {
+    let xml = await zip.file(path).async('string');
+    if (xml.includes('<pageSetup')) continue;
+    xml = xml.replace(/(<worksheet[^>]*>)/, '$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
+    if (/<ignoredErrors/.test(xml))    xml = xml.replace(/<ignoredErrors/, pageXml + '<ignoredErrors');
+    else if (/<drawing /.test(xml))   xml = xml.replace(/<drawing /, pageXml + '<drawing ');
+    else                              xml = xml.replace('</worksheet>', pageXml + '</worksheet>');
+    zip.file(path, xml);
+  }
+}
+
+// Ubica el archivo XML (xl/worksheets/sheetN.xml) que corresponde a una hoja, buscando su nombre visible
+async function xlsLocalizarHoja(zip, nombreHoja) {
+  const workbookXml = await zip.file('xl/workbook.xml').async('string');
+  const relsXml = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+  const nombreEsc = nombreHoja.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const sheetMatch = new RegExp(`<sheet[^>]*name="${nombreEsc}"[^>]*r:id="([^"]+)"`).exec(workbookXml);
+  if (!sheetMatch) return null;
+  const rId = sheetMatch[1];
+  const relMatch = new RegExp(`<Relationship[^>]*Id="${rId}"[^>]*Target="([^"]+)"`).exec(relsXml);
+  if (!relMatch) return null;
+  const target = relMatch[1].replace(/^\/?xl\//, '').replace(/^\.\//, '');
+  const sheetPath = `xl/${target}`;
+  const sheetNumMatch = /sheet(\d+)\.xml$/.exec(sheetPath);
+  return { sheetPath, sheetNum: sheetNumMatch ? sheetNumMatch[1] : '1' };
+}
+
+// Escapa texto para insertarlo de forma segura dentro de XML (usado al construir el gráfico nativo)
+function xlsEsc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Embebe un gráfico de barras nativo de Excel (no una imagen) en una hoja, referenciando un rango de celdas
+async function xlsInyectarGraficoBarras(zip, opts) {
+  const ubic = await xlsLocalizarHoja(zip, opts.nombreHoja);
+  if (!ubic) return;
+  const { sheetPath, sheetNum } = ubic;
+
+  const catCount = opts.categorias.length;
+  const catPts = opts.categorias.map((c, i) => `<c:pt idx="${i}"><c:v>${xlsEsc(c)}</c:v></c:pt>`).join('');
+  const valPts = opts.valores.map((v, i) => `<c:pt idx="${i}"><c:v>${Number(v) || 0}</c:v></c:pt>`).join('');
+
+  const chartXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<c:chart>
+<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1200" b="1"/></a:pPr><a:r><a:rPr lang="es-CO" sz="1200" b="1"/><a:t>${xlsEsc(opts.titulo)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>
+<c:autoTitleDeleted val="0"/>
+<c:plotArea>
+<c:layout/>
+<c:barChart>
+<c:barDir val="col"/>
+<c:grouping val="clustered"/>
+<c:varyColors val="0"/>
+<c:ser>
+<c:idx val="0"/>
+<c:order val="0"/>
+<c:tx><c:v>${xlsEsc(opts.nombreSerie)}</c:v></c:tx>
+<c:spPr><a:solidFill><a:srgbClr val="${opts.colorSerie || '2E7D32'}"/></a:solidFill></c:spPr>
+<c:cat><c:strRef><c:f>${xlsEsc(opts.nombreHoja)}!${opts.rangoCategorias}</c:f><c:strCache><c:ptCount val="${catCount}"/>${catPts}</c:strCache></c:strRef></c:cat>
+<c:val><c:numRef><c:f>${xlsEsc(opts.nombreHoja)}!${opts.rangoValores}</c:f><c:numCache><c:formatCode>0.0</c:formatCode><c:ptCount val="${catCount}"/>${valPts}</c:numCache></c:numRef></c:val>
+</c:ser>
+<c:axId val="111111111"/>
+<c:axId val="222222222"/>
+</c:barChart>
+<c:catAx>
+<c:axId val="111111111"/>
+<c:scaling><c:orientation val="minMax"/></c:scaling>
+<c:delete val="0"/>
+<c:axPos val="b"/>
+<c:txPr><a:bodyPr rot="-2700000" vert="horz"/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"/></a:pPr><a:endParaRPr lang="es-CO"/></a:p></c:txPr>
+<c:crossAx val="222222222"/>
+</c:catAx>
+<c:valAx>
+<c:axId val="222222222"/>
+<c:scaling><c:orientation val="minMax"/></c:scaling>
+<c:delete val="0"/>
+<c:axPos val="l"/>
+<c:majorGridlines/>
+<c:crossAx val="111111111"/>
+</c:valAx>
+</c:plotArea>
+<c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>
+<c:plotVisOnly val="1"/>
+</c:chart>
+</c:chartSpace>`;
+
+  const drawingXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+<xdr:twoCellAnchor>
+<xdr:from><xdr:col>${opts.anclaDesde.col}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${opts.anclaDesde.fila}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+<xdr:to><xdr:col>${opts.anclaHasta.col}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${opts.anclaHasta.fila}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
+<xdr:graphicFrame macro="">
+<xdr:nvGraphicFramePr>
+<xdr:cNvPr id="2" name="Gráfico 1"/>
+<xdr:cNvGraphicFramePr/>
+</xdr:nvGraphicFramePr>
+<xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
+<a:graphic>
+<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId1"/>
+</a:graphicData>
+</a:graphic>
+</xdr:graphicFrame>
+<xdr:clientData/>
+</xdr:twoCellAnchor>
+</xdr:wsDr>`;
+
+  const drawingRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+</Relationships>`;
+
+  zip.file('xl/charts/chart1.xml', chartXml);
+  zip.file('xl/drawings/drawing1.xml', drawingXml);
+  zip.file('xl/drawings/_rels/drawing1.xml.rels', drawingRelsXml);
+
+  const sheetRelsPath = `xl/worksheets/_rels/sheet${sheetNum}.xml.rels`;
+  const relsFile = zip.file(sheetRelsPath);
+  let sheetRelsXml = relsFile
+    ? await relsFile.async('string')
+    : `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`;
+  const nuevoRid = 'rIdDrawing1';
+  sheetRelsXml = sheetRelsXml.replace('</Relationships>',
+    `<Relationship Id="${nuevoRid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>`);
+  zip.file(sheetRelsPath, sheetRelsXml);
+
+  let sheetXml = await zip.file(sheetPath).async('string');
+  sheetXml = sheetXml.replace('</worksheet>', `<drawing r:id="${nuevoRid}"/></worksheet>`);
+  zip.file(sheetPath, sheetXml);
+
+  let ctXml = await zip.file('[Content_Types].xml').async('string');
+  ctXml = ctXml.replace('</Types>',
+    `<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>` +
+    `<Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>`);
+  zip.file('[Content_Types].xml', ctXml);
+}
+
+// ══════════════════════════════════════════
+// GENERACIÓN DEL EXCEL — descarga
+// ══════════════════════════════════════════
+// Orquesta todo: arma las 3 hojas, les aplica estilo y descarga el .xlsx final
+async function descargarExcel() {
   const regs = registrosEnRango();
   if (!regs.length) return;
 
-  const wb = XLSX.utils.book_new();
+  const btn = document.getElementById('btn-descargar');
+  const btnHtmlOriginal = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = 'Generando informe…';
 
-  // Hoja 1 — Registros
-  const cab1 = [['Fecha','Hora','Conductor','Placa','Tipo de registro','Nota','Latitud','Longitud','Link mapa']];
-  const filas1 = regs.map(r => {
-    const d    = new Date(r.timestamp);
-    const hora = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    return [
-      String(r.fecha).slice(0,10), hora,
-      r.conductor.trim(), r.placa, r.tipo, r.nota,
-      r.lat ? Number(r.lat) : '',
-      r.lng ? Number(r.lng) : '',
-      r.lat ? `https://www.google.com/maps?q=${r.lat},${r.lng}` : '',
-    ];
-  });
-  const ws1 = XLSX.utils.aoa_to_sheet([...cab1, ...filas1]);
-  ws1['!cols'] = [{wch:12},{wch:7},{wch:30},{wch:8},{wch:20},{wch:45},{wch:12},{wch:12},{wch:50}];
-  XLSX.utils.book_append_sheet(wb, ws1, 'Registros');
+  try {
+    const desde = xFiltros.desde || 'inicio';
+    const hasta = xFiltros.hasta || hoyKey();
 
-  // Hoja 2 — Resumen por conductor
-  const porConductor = {};
-  regs.forEach(r => {
-    const nombre = r.conductor.trim();
-    const fecha  = String(r.fecha).slice(0,10);
-    if (!porConductor[nombre])        porConductor[nombre] = {};
-    if (!porConductor[nombre][fecha]) porConductor[nombre][fecha] = [];
-    porConductor[nombre][fecha].push(r);
-  });
-
-  const promedioHHMM = arr => {
-    if (!arr.length) return '—';
-    const avg = Math.round(arr.reduce((a,b) => a+b, 0) / arr.length);
-    return `${pad(Math.floor(avg/60))}:${pad(avg%60)}`;
-  };
-
-  const calcularFila = (nombre, placa, diasObj) => {
-    const dias = Object.keys(diasObj);
-    if (!dias.length) return [nombre, placa, 0, '—', '—', 0, '—'];
-    let mInicio = [], mFin = [], paradas = 0, minsTrab = 0;
-    dias.forEach(fecha => {
-      const rd  = diasObj[fecha];
-      const ini = rd.find(r => r.tipo === 'Inicio jornada');
-      const fin = rd.find(r => r.tipo === 'Fin jornada');
-      paradas += rd.filter(r => r.tipo === 'Llegada a parada').length;
-      if (ini) { const d2 = new Date(ini.timestamp); mInicio.push(d2.getHours()*60 + d2.getMinutes()); }
-      if (fin) { const d2 = new Date(fin.timestamp);  mFin.push(d2.getHours()*60 + d2.getMinutes()); }
-      if (ini && fin) {
-        const diff = Math.round((new Date(fin.timestamp) - new Date(ini.timestamp)) / 60000);
-        if (diff > 0) minsTrab += diff;
+    // ── Conductor + placa (usado en Dashboard y en "Resumen por conductor") ──
+    const porConductorPlaca = agruparPorClave(regs, r => ({
+      key: r.conductor.trim() + '||' + r.placa, nombre: r.conductor.trim(), placa: r.placa,
+    }));
+    const nombresConDatos = new Set(Object.values(porConductorPlaca).map(g => g.nombre));
+    CONDUCTORES_FIJOS.forEach(c => {
+      const nombre = c.nombre.trim();
+      if (!nombresConDatos.has(nombre)) {
+        porConductorPlaca[nombre + '||' + c.placa] = { nombre, placa: c.placa, dias: {} };
       }
     });
-    const totalHoras = minsTrab > 0 ? `${Math.floor(minsTrab/60)}h ${minsTrab%60}m` : '—';
-    return [nombre, placa, dias.length, promedioHHMM(mInicio), promedioHHMM(mFin), paradas, totalHoras];
-  };
+    const datosPorConductorPlaca = Object.values(porConductorPlaca)
+      .map(g => calcularDatosConductor(g.nombre, g.placa, g.dias))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre) || a.placa.localeCompare(b.placa));
+    const conductoresActivos = datosPorConductorPlaca.filter(d => d.diasTrabajados > 0).length;
 
-  const cab2 = [['Conductor','Placa','Días trabajados','Prom. hora inicio','Prom. hora fin','Total paradas (llegadas)','Total horas trabajadas']];
-  const filas2 = CONDUCTORES_FIJOS.map(c => calcularFila(c.nombre.trim(), c.placa, porConductor[c.nombre.trim()] || {}));
+    const wb = XLSX.utils.book_new();
 
-  // Conductores históricos
-  const nombresEnFijos = new Set(CONDUCTORES_FIJOS.map(c => c.nombre.trim()));
-  Object.keys(porConductor).sort().forEach(nombre => {
-    if (!nombresEnFijos.has(nombre)) {
-      const primeraFecha = Object.keys(porConductor[nombre])[0];
-      const placa = porConductor[nombre][primeraFecha][0].placa;
-      filas2.push(calcularFila(nombre, placa, porConductor[nombre]));
+    // ══════════════ Hoja "Dashboard" ══════════════
+    const filasDash = [];
+    let fila = 0;
+    const push = arr => { filasDash.push(arr); fila++; };
+
+    const filaTitulo = fila; push(['DASHBOARD — Informe BavariaxUnionAndina']);
+    push([]);
+
+    const filaTituloResumen = fila; push(['RESUMEN GENERAL']);
+    const filaHdrResumen = fila; push(['Métrica', 'Valor']);
+    push(['Total de registros', regs.length]);
+    push(['Conductores activos en el período', conductoresActivos]);
+    push(['Rango de fechas', `${desde} al ${hasta}`]);
+    const filaFinResumen = fila - 1;
+    push([]);
+
+    const topHoras = datosPorConductorPlaca.reduce((a, b) => (!a || b.minsTrab > a.minsTrab) ? b : a, null);
+    const filaTituloEstrella = fila; push(['⭐ CONDUCTOR ESTRELLA DEL PERÍODO (más horas trabajadas)']);
+    const filaHdrEstrella = fila; push(['Conductor', 'Placa', 'Total horas']);
+    const filaDatoEstrella = fila;
+    push(topHoras ? [topHoras.nombre, topHoras.placa, +(topHoras.minsTrab / 60).toFixed(2)] : ['—', '—', 0]);
+    push([]);
+
+    const conteoTipos = {};
+    regs.forEach(r => { conteoTipos[r.tipo] = (conteoTipos[r.tipo] || 0) + 1; });
+    const tiposOrden = ['Inicio jornada', 'Llegada a parada', 'Salida de parada', 'Fin jornada'];
+    const filaTituloTipos = fila; push(['TOTAL DE REGISTROS POR TIPO']);
+    const filaHdrTipos = fila; push(['Tipo de registro', 'Cantidad']);
+    const filaTiposInicio = fila;
+    tiposOrden.forEach(t => push([t, conteoTipos[t] || 0]));
+    Object.keys(conteoTipos).filter(t => !tiposOrden.includes(t)).forEach(t => push([t, conteoTipos[t]]));
+    const filaTiposFin = fila - 1;
+    push([]);
+
+    const filaTituloConductores = fila; push(['CONDUCTORES — DETALLE DEL PERÍODO']);
+    const filaHdrConductores = fila;
+    push(['Conductor', 'Placa', 'Días trabajados', 'Total horas', 'Promedio horas/día', 'Total paradas']);
+    const filaConductoresInicio = fila;
+    datosPorConductorPlaca.forEach(d => push([
+      d.nombre, d.placa, d.diasTrabajados,
+      +(d.minsTrab / 60).toFixed(2), +(d.promHorasDiaMin / 60).toFixed(2), d.paradas,
+    ]));
+    const filaConductoresFin = fila - 1;
+
+    const wsDash = XLSX.utils.aoa_to_sheet(filasDash);
+    const numColsDash = 6;
+    const numFmtHoras = '0.00" h"';
+
+    xlsTitular(wsDash, filaTitulo);
+    xlsTitular(wsDash, filaTituloResumen);
+    xlsEncabezarFila(wsDash, filaHdrResumen, 2);
+    xlsBandearFilas(wsDash, filaHdrResumen + 1, filaFinResumen, 2);
+
+    xlsTitular(wsDash, filaTituloEstrella);
+    xlsEncabezarFila(wsDash, filaHdrEstrella, 3);
+    xlsBandearFilas(wsDash, filaDatoEstrella, filaDatoEstrella, 3, () => XLS_ESTILO.estrellaFill);
+    xlsCelda(wsDash, filaDatoEstrella, 2).s.numFmt = numFmtHoras;
+
+    xlsTitular(wsDash, filaTituloTipos);
+    xlsEncabezarFila(wsDash, filaHdrTipos, 2);
+    xlsBandearFilas(wsDash, filaTiposInicio, filaTiposFin, 2);
+
+    xlsTitular(wsDash, filaTituloConductores);
+    xlsEncabezarFila(wsDash, filaHdrConductores, numColsDash);
+    xlsBandearFilas(wsDash, filaConductoresInicio, filaConductoresFin, numColsDash);
+    for (let r = filaConductoresInicio; r <= filaConductoresFin; r++) {
+      xlsCelda(wsDash, r, 3).s.numFmt = numFmtHoras;
+      xlsCelda(wsDash, r, 4).s.numFmt = numFmtHoras;
     }
-  });
 
-  const ws2 = XLSX.utils.aoa_to_sheet([...cab2, ...filas2]);
-  ws2['!cols'] = [{wch:32},{wch:8},{wch:16},{wch:18},{wch:16},{wch:24},{wch:20}];
-  XLSX.utils.book_append_sheet(wb, ws2, 'Resumen por conductor');
+    wsDash['!cols'] = xlsAutoAjustarColumnas(filasDash, 12, 42);
+    XLSX.utils.book_append_sheet(wb, wsDash, 'Dashboard');
 
-  const desde = xFiltros.desde || 'inicio';
-  const hasta = xFiltros.hasta || hoyKey();
-  XLSX.writeFile(wb, `Informe_BavariaxUnion_${desde}_al_${hasta}.xlsx`);
+    // ══════════════ Hoja "Registros" — ordenada por fecha y conductor ══════════════
+    const regsOrdenados = regs.slice().sort((a, b) =>
+      String(a.fecha).slice(0,10).localeCompare(String(b.fecha).slice(0,10)) ||
+      a.conductor.trim().localeCompare(b.conductor.trim()) ||
+      a.timestamp.localeCompare(b.timestamp)
+    );
+    const cab1 = ['Fecha', 'Hora', 'Conductor', 'Placa', 'Tipo de registro', 'Nota', 'Latitud', 'Longitud', 'Link mapa'];
+    const filas1 = regsOrdenados.map(r => {
+      const d    = new Date(r.timestamp);
+      const hora = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      return [
+        String(r.fecha).slice(0,10), hora,
+        r.conductor.trim(), r.placa, r.tipo, r.nota,
+        r.lat ? Number(r.lat) : '',
+        r.lng ? Number(r.lng) : '',
+        r.lat ? `https://www.google.com/maps?q=${r.lat},${r.lng}` : '',
+      ];
+    });
+    const aoa1 = [cab1, ...filas1];
+    const ws1 = XLSX.utils.aoa_to_sheet(aoa1);
+    xlsEncabezarFila(ws1, 0, cab1.length);
+    xlsBandearFilas(ws1, 1, filas1.length, cab1.length, r => XLS_ESTILO.tipoFill[regsOrdenados[r - 1].tipo]);
+    ws1['!cols'] = xlsAutoAjustarColumnas(aoa1, 8, 50);
+    XLSX.utils.book_append_sheet(wb, ws1, 'Registros');
+
+    // ══════════════ Hoja "Resumen por conductor" — separado por conductor y placa ══════════════
+    const cab2 = ['Conductor', 'Placa', 'Días trabajados', 'Prom. hora inicio', 'Prom. hora fin', 'Total paradas (llegadas)', 'Total horas trabajadas', 'Prom. horas por día trabajado'];
+    const filas2 = datosPorConductorPlaca.map(d => [
+      d.nombre, d.placa, d.diasTrabajados,
+      promedioHHMM(d.mInicio), promedioHHMM(d.mFin),
+      d.paradas, formatoHoras(d.minsTrab), formatoHoras(d.promHorasDiaMin),
+    ]);
+    const aoa2 = [cab2, ...filas2];
+    const ws2 = XLSX.utils.aoa_to_sheet(aoa2);
+    xlsEncabezarFila(ws2, 0, cab2.length);
+    xlsBandearFilas(ws2, 1, filas2.length, cab2.length);
+    ws2['!cols'] = xlsAutoAjustarColumnas(aoa2, 10, 32);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Resumen por conductor');
+
+    // ── Genera el libro y aplica paneles congelados + gráfico nativo ──
+    const buffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+    const nombreArchivo = `Informe_BavariaxUnion_${desde}_al_${hasta}.xlsx`;
+    const mimeXlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+    try {
+      const zip = await JSZip.loadAsync(buffer);
+      await xlsInyectarFreezePanes(zip);
+      await xlsInyectarConfigPagina(zip);
+      if (datosPorConductorPlaca.length) {
+        await xlsInyectarGraficoBarras(zip, {
+          nombreHoja: 'Dashboard',
+          titulo: 'Horas trabajadas por conductor',
+          categorias: datosPorConductorPlaca.map(d => d.nombre),
+          valores: datosPorConductorPlaca.map(d => +(d.minsTrab / 60).toFixed(2)),
+          nombreSerie: 'Total horas',
+          rangoCategorias: `$A$${filaConductoresInicio + 1}:$A$${filaConductoresFin + 1}`,
+          rangoValores: `$D$${filaConductoresInicio + 1}:$D$${filaConductoresFin + 1}`,
+          anclaDesde: { col: 7, fila: filaTituloResumen },
+          anclaHasta: { col: 15, fila: filaTituloResumen + 20 },
+          colorSerie: '2E7D32',
+        });
+      }
+      const blob = await zip.generateAsync({ type: 'blob', mimeType: mimeXlsx });
+      xlsDescargarBlob(blob, nombreArchivo);
+    } catch (errPost) {
+      console.error('No se pudo aplicar el panel congelado / gráfico, se descarga el informe sin ellos:', errPost);
+      xlsDescargarBlob(new Blob([buffer], { type: mimeXlsx }), nombreArchivo);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = btnHtmlOriginal;
+  }
 }
 
 // ══════════════════════════════════════════
