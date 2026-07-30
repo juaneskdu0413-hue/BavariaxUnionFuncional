@@ -165,10 +165,9 @@ function entrarConSesion() {
   document.getElementById('tabs-nav').style.display = 'flex';
 
   if (sesion.rol === 'admin') {
-    // Admin: solo ve el Panel de Coordinación
-    document.getElementById('tab-conductor').style.display = 'none';
-    document.getElementById('tab-panel').style.display = 'inline-block';
-    cambiarVista('panel');
+    // Admin: redirige a la página independiente del panel de coordinación
+    window.location.href = 'admin.html';
+    return;
   } else {
     // Conductor: solo ve su formulario de registro, con su nombre/placa fijos
     document.getElementById('tab-conductor').style.display = 'inline-block';

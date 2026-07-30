@@ -1098,6 +1098,23 @@ body {
 
 <script>
 // ══════════════════════════════════════════
+// PROTECCIÓN DE SESIÓN
+// ══════════════════════════════════════════
+// admin.html es una página independiente (no carga Logica.js), así que
+// repite aquí la misma clave de sessionStorage que usa index.html tras
+// el login. Sin una sesión de admin válida, redirige al login y no
+// carga nada más de este script (ni datos ni el panel).
+(function protegerAcceso() {
+  try {
+    const raw = sessionStorage.getItem('jvk_sesion_actual');
+    const datos = raw ? JSON.parse(raw) : null;
+    if (datos && datos.rol === 'admin') return;
+  } catch (e) {}
+  window.location.href = 'index.html';
+  throw new Error('Sin sesión de admin válida — redirigiendo a index.html');
+})();
+
+// ══════════════════════════════════════════
 // CONFIGURACIÓN
 // ══════════════════════════════════════════
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybeK--ANSECbaOHO4sspV3111fnO5ya5xCi5qiqhpx8K_8nI6W1xZloBToZhTDbOkAEQ/exec';
