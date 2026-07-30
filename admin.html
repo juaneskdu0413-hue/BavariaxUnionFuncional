@@ -1111,7 +1111,7 @@ body {
 // carga nada más de este script (ni datos ni el panel).
 (function protegerAcceso() {
   try {
-    const raw = sessionStorage.getItem('jvk_sesion_actual');
+    const raw = sessionStorage.getItem('bxua_sesion');
     const datos = raw ? JSON.parse(raw) : null;
     if (datos && datos.rol === 'admin') return;
   } catch (e) {}
@@ -1121,7 +1121,7 @@ body {
 
 // Botón "Cerrar sesión" del header: borra la sesión y vuelve al login
 function cerrarSesionAdmin() {
-  sessionStorage.removeItem('jvk_sesion_actual');
+  sessionStorage.removeItem('bxua_sesion');
   window.location.href = 'index.html';
 }
 
