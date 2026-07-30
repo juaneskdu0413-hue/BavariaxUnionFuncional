@@ -53,30 +53,10 @@
       <label class="form-lbl">¿Quién eres?</label>
       <div class="chip-grupo" id="chips-identidad">
 
-        <div class="chip-opcion" data-rol="conductor" data-val="CARLOS MARIO GÁMEZ" data-placa="JVK031">
-          Carlos Mario Gámez
-          <div class="chip-sub">CC 1003376142 · Placa JVK031</div>
-        </div>
-        <div class="chip-opcion" data-rol="conductor" data-val="DEIBIS RAFAEL PADILLA" data-placa="JVK142">
-          Deibis Rafael Padilla
-          <div class="chip-sub">CC 8498966 · Placa JVK142</div>
-        </div>
-        <div class="chip-opcion" data-rol="conductor" data-val="OSCAR ANDRES VASQUEZ" data-placa="JVK595">
-          Oscar Andrés Vásquez
-          <div class="chip-sub">CC 1015422543 · Placa JVK595</div>
-        </div>
-        <div class="chip-opcion" data-rol="conductor" data-val="FREDY SANTANA ACUÑA" data-placa="JVK594">
-          Fredy Santana Acuña
-          <div class="chip-sub">CC 1024483571 · Placa JVK594</div>
-        </div>
-        <div class="chip-opcion" data-rol="conductor" data-val="JOSE EDGARDO HERNANDEZ CRUZ" data-placa="JVK129">
-          Jose Edgardo Hernández Cruz
-          <div class="chip-sub">CC 79750999 · Placa JVK129</div>
-        </div>
-        <div class="chip-opcion" data-rol="conductor" data-val="WALTER YESID PACHON RODRIGUEZ" data-placa="JVK128">
-          Walter Yesid Pachón Rodríguez
-          <div class="chip-sub">CC 1104698940 · Placa JVK128</div>
-        </div>
+        <!-- Los chips de conductores se generan dinámicamente en Logica.js
+             (renderChipsConductores), leyendo localStorage['bxua_conductores']
+             para reflejar altas/bajas hechas desde el panel de admin.
+             El chip de Admin es el único fijo en el HTML. -->
         <div class="chip-opcion" data-rol="admin" data-val="ADMIN">
           Coordinación / Admin
           <div class="chip-sub">Requiere clave de acceso</div>

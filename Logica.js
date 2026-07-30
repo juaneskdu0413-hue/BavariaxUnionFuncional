@@ -8,6 +8,22 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybeK--ANSECbaO
 const STORAGE_KEY = 'jvk_checkins_registros';
 const SESION_KEY = 'bxua_sesion';
 
+// Misma clave que usa admin.html (pestaña "Conductores") para guardar la lista
+// de conductores activos. Si el panel de admin agrega/elimina conductores,
+// el login los refleja automáticamente al recargar esta página.
+const CONDUCTORES_KEY = 'bxua_conductores';
+
+// Lista de respaldo: se usa solo si no hay nada guardado todavía en localStorage
+// (primera carga, o navegador/dispositivo distinto al que usó el admin).
+const CONDUCTORES_DEFAULT = [
+  { nombre: 'CARLOS MARIO GÁMEZ',            cedula: '1003376142', placa: 'JVK031' },
+  { nombre: 'DEIBIS RAFAEL PADILLA',         cedula: '8498966',    placa: 'JVK142' },
+  { nombre: 'OSCAR ANDRES VASQUEZ',          cedula: '1015422543', placa: 'JVK595' },
+  { nombre: 'FREDY SANTANA ACUÑA',           cedula: '1024483571', placa: 'JVK594' },
+  { nombre: 'JOSE EDGARDO HERNANDEZ CRUZ',   cedula: '79750999',   placa: 'JVK129' },
+  { nombre: 'WALTER YESID PACHON RODRIGUEZ', cedula: '1104698940', placa: 'JVK128' },
+];
+
 // ⚠️ Clave de admin: cámbiala por la que quieras usar.
 // Esto es solo una barrera simple para evitar que los conductores
 // abran el panel por error. No es seguridad robusta (el código es
@@ -59,7 +75,60 @@ function restaurarSesion() {
   }
 }
 
+// Lee la lista de conductores activos desde localStorage (misma clave que admin.html).
+// Si no hay nada guardado o el dato está corrupto, usa la lista de respaldo.
+function obtenerConductoresGuardados() {
+  try {
+    const raw = localStorage.getItem(CONDUCTORES_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length) return arr;
+    }
+  } catch (e) {}
+  return CONDUCTORES_DEFAULT.slice();
+}
+
+// Dibuja un chip de conductor con el mismo marcado que usaban los chips fijos
+// (data-rol, data-val, data-placa, chip-sub). Si el conductor no tiene cédula
+// registrada (ej. uno agregado desde el panel de admin, que no la pide), el
+// chip-sub solo muestra la placa.
+function crearChipConductor(c) {
+  const div = document.createElement('div');
+  div.className = 'chip-opcion';
+  div.dataset.rol = 'conductor';
+  div.dataset.val = c.nombre;
+  div.dataset.placa = c.placa;
+
+  const nombreTxt = document.createTextNode(c.nombre);
+  const sub = document.createElement('div');
+  sub.className = 'chip-sub';
+  sub.textContent = c.cedula ? `CC ${c.cedula} · Placa ${c.placa}` : `Placa ${c.placa}`;
+
+  div.appendChild(nombreTxt);
+  div.appendChild(sub);
+  return div;
+}
+
+// Inserta los chips de conductores (desde localStorage) antes del chip fijo
+// de "Coordinación / Admin", que se mantiene estático en el HTML.
+function renderChipsConductores() {
+  const contenedor = document.getElementById('chips-identidad');
+  if (!contenedor) return;
+  const chipAdmin = contenedor.querySelector('.chip-opcion[data-rol="admin"]');
+
+  contenedor.querySelectorAll('.chip-opcion[data-rol="conductor"]').forEach(el => el.remove());
+
+  const conductores = obtenerConductoresGuardados();
+  conductores.forEach(c => {
+    const chip = crearChipConductor(c);
+    if (chipAdmin) contenedor.insertBefore(chip, chipAdmin);
+    else contenedor.appendChild(chip);
+  });
+}
+
 function inicializarLogin() {
+  renderChipsConductores();
+
   let rolElegido = null;
   let datosElegidos = null;
 
