@@ -209,6 +209,10 @@ function inicializarBotones() {
     c.addEventListener('click', () => {
       seleccionarChip('#chips-tipo', c);
       tipoSel = c.dataset.val;
+      // "Novedad del día" solo aplica a check-in (Inicio jornada) y checkout (Fin jornada)
+      const mostrarNovedad = tipoSel === 'Inicio jornada' || tipoSel === 'Fin jornada';
+      document.getElementById('novedad-box').style.display = mostrarNovedad ? 'block' : 'none';
+      if (!mostrarNovedad) document.getElementById('novedad').value = '';
     });
   });
 }
@@ -285,6 +289,7 @@ function onGPSError(error) {
 // ════════════════════════════════════════════════════════
 async function enviarCheckin() {
   const nota = document.getElementById('nota').value.trim();
+  const novedad = document.getElementById('novedad').value.trim();
 
   if (!conductorSel) { alert('Selecciona el conductor.'); return; }
   if (!placaSel)     { alert('Selecciona el vehículo.'); return; }
@@ -302,6 +307,7 @@ async function enviarCheckin() {
     placa: placaSel,
     tipo: tipoSel,
     nota: nota,
+    novedad: novedad,
     lat: gpsLat,
     lng: gpsLng,
     precision: gpsPrecision,
@@ -335,6 +341,8 @@ function mostrarConfirmacion(registro, ahora) {
 
 function resetearFormularioParcial() {
   document.getElementById('nota').value = '';
+  document.getElementById('novedad').value = '';
+  document.getElementById('novedad-box').style.display = 'none';
   document.querySelectorAll('#chips-tipo .chip-opcion').forEach(x => x.classList.remove('sel'));
   tipoSel = null;
   gpsLat = null; gpsLng = null; gpsPrecision = null;
