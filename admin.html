@@ -209,6 +209,32 @@ body {
 .btn-outline.activo { background: var(--red); color: #fff; border-color: var(--red); }
 
 /* ══════════════════════════════════════════
+   SEMÁFORO — estado del día por conductor, de un vistazo
+══════════════════════════════════════════ */
+.semaforo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.semaforo-card {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--white); border: 1px solid var(--border); border-left: 4px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.semaforo-card.semaforo-completa { border-left-color: var(--green2); }
+.semaforo-card.semaforo-ruta     { border-left-color: var(--yellow); }
+.semaforo-card.semaforo-sin      { border-left-color: var(--red); }
+.semaforo-icono { font-size: 18px; flex-shrink: 0; }
+.semaforo-info { min-width: 0; flex: 1; }
+.semaforo-nombre {
+  font-size: 12px; font-weight: 700; color: var(--dark);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.semaforo-hora { font-size: 11px; color: #999; margin-top: 1px; }
+
+/* ══════════════════════════════════════════
    TOOLBAR / FILTROS
 ══════════════════════════════════════════ */
 .toolbar    { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -884,6 +910,9 @@ body {
 ══════════════════════════════════════════ -->
 <section class="seccion activo" id="sec-dashboard">
 
+  <!-- Semáforo compacto: estado del día por conductor, de un vistazo -->
+  <div class="semaforo-grid" id="semaforo-grid"></div>
+
   <div class="toolbar">
     <button class="btn btn-red" onclick="cargar()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -1303,6 +1332,7 @@ async function cargar() {
     const res = await fetch(APPS_SCRIPT_URL);
     todosRegistros = await res.json();
     if (!Array.isArray(todosRegistros)) throw new Error('Formato inesperado');
+    renderSemaforo();
     renderFiltros();
     renderTarjetas();
   } catch (e) {
@@ -1327,6 +1357,40 @@ function agruparRegistrosPorConductor(regs) {
     porConductor[nombre].push(r);
   });
   return porConductor;
+}
+
+// Emoji e clase CSS del semáforo según el estado de jornada del conductor
+const SEMAFORO_CONFIG = {
+  completa: { emoji: '🟢', clase: 'semaforo-completa' },
+  ruta:     { emoji: '🟡', clase: 'semaforo-ruta' },
+  parcial:  { emoji: '🔴', clase: 'semaforo-sin' },
+  sin:      { emoji: '🔴', clase: 'semaforo-sin' },
+};
+
+// Dibuja el semáforo compacto: un vistazo rápido del estado de TODOS los conductores fijos,
+// sin importar el filtro por conductor activo del dashboard (a diferencia de renderTarjetas)
+function renderSemaforo() {
+  const grid = document.getElementById('semaforo-grid');
+  if (!grid) return;
+
+  const hoy = hoyKey();
+  const registrosHoy = todosRegistros.filter(r => String(r.fecha).slice(0,10) === hoy);
+  const porConductor = agruparRegistrosPorConductor(registrosHoy);
+
+  grid.innerHTML = CONDUCTORES_FIJOS.map(c => {
+    const d = datosCondutor(c.nombre, porConductor);
+    const cfg = SEMAFORO_CONFIG[d.estadoKey];
+    const ultimoRegistro = d.regs.length ? d.regs[d.regs.length - 1] : null;
+    const horaTxt = ultimoRegistro ? horaDesdeTimestamp(ultimoRegistro.timestamp) : 'Sin registros hoy';
+    return `
+      <div class="semaforo-card ${cfg.clase}">
+        <div class="semaforo-icono">${cfg.emoji}</div>
+        <div class="semaforo-info">
+          <div class="semaforo-nombre">${esc(c.nombre)}</div>
+          <div class="semaforo-hora">${ultimoRegistro ? 'Último registro: ' + horaTxt : horaTxt}</div>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // Dibuja los botones de filtro por conductor (solo los que tuvieron actividad hoy)
