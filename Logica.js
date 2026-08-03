@@ -8,6 +8,17 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybeK--ANSECbaO
 const STORAGE_KEY = 'jvk_checkins_registros';
 const SESION_KEY = 'jvk_sesion_actual';
 
+// Misma clave y formato que usa admin.html para su propia sesión de admin
+// ({ rol: 'admin', usuario }, en localStorage). Login exitoso aquí redirige
+// directo a admin.html, que reconoce esa sesión sin pedir credenciales de nuevo.
+const SESION_ADMIN_KEY = 'bxua_sesion';
+
+// Misma lista de usuarios autorizados que admin.html.
+const USUARIOS_ADMIN = [
+  { usuario: 'juaneskdu', clave: 'Juancho043' },
+  { usuario: 'NelsonC',   clave: 'Nelson043' },
+];
+
 // Misma clave que usa admin.html (pestaña "Conductores") para guardar la lista
 // de conductores activos. Si el panel de admin agrega/elimina conductores,
 // el login los refleja automáticamente al recargar esta página.
@@ -98,16 +109,21 @@ function crearChipConductor(c) {
   return div;
 }
 
-// Inserta los chips de conductores (desde localStorage) en #chips-identidad.
-// El acceso de Coordinación/Admin ya no vive en este archivo (ver admin.html).
+// Inserta los chips de conductores (desde localStorage) antes del chip fijo
+// de "Coordinación / Admin", que se mantiene estático en el HTML.
 function renderChipsConductores() {
   const contenedor = document.getElementById('chips-identidad');
   if (!contenedor) return;
+  const chipAdmin = contenedor.querySelector('.chip-opcion[data-rol="admin"]');
 
   contenedor.querySelectorAll('.chip-opcion[data-rol="conductor"]').forEach(el => el.remove());
 
   const conductores = obtenerConductoresGuardados();
-  conductores.forEach(c => contenedor.appendChild(crearChipConductor(c)));
+  conductores.forEach(c => {
+    const chip = crearChipConductor(c);
+    if (chipAdmin) contenedor.insertBefore(chip, chipAdmin);
+    else contenedor.appendChild(chip);
+  });
 }
 
 function inicializarLogin() {
@@ -121,11 +137,31 @@ function inicializarLogin() {
       seleccionarChip('#chips-identidad', c);
       rolElegido = c.dataset.rol;
       datosElegidos = { nombre: c.dataset.val, placa: c.dataset.placa || null };
+      document.getElementById('admin-clave-box').style.display = (rolElegido === 'admin') ? 'block' : 'none';
+      document.getElementById('login-err').classList.remove('vis');
     });
   });
 
   document.getElementById('btn-login').addEventListener('click', () => {
     if (!rolElegido) { alert('Selecciona quién eres.'); return; }
+
+    if (rolElegido === 'admin') {
+      const usuario = document.getElementById('admin-usuario').value.trim();
+      const clave = document.getElementById('admin-clave').value;
+      const err = document.getElementById('login-err');
+      const encontrado = USUARIOS_ADMIN.find(u => u.usuario === usuario && u.clave === clave);
+
+      if (!encontrado) {
+        err.textContent = 'Usuario o contraseña incorrectos';
+        err.classList.add('vis');
+        return;
+      }
+
+      err.classList.remove('vis');
+      localStorage.setItem(SESION_ADMIN_KEY, JSON.stringify({ rol: 'admin', usuario: encontrado.usuario }));
+      window.location.href = 'admin.html';
+      return;
+    }
 
     sesion = { rol: 'conductor', nombre: datosElegidos.nombre, placa: datosElegidos.placa };
     sessionStorage.setItem(SESION_KEY, JSON.stringify(sesion));
