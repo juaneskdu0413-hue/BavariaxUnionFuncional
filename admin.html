@@ -34,6 +34,70 @@ body {
 }
 
 /* ══════════════════════════════════════════
+   LOGIN ADMIN (usuario + contraseña)
+══════════════════════════════════════════ */
+.login-admin-overlay {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
+  padding: 20px;
+}
+.login-admin-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--white);
+  border-radius: 16px;
+  padding: 32px 28px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  text-align: center;
+}
+.login-admin-marca {
+  font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.login-admin-marca .b-bavaria { color: var(--red); }
+.login-admin-marca .b-x       { color: var(--muted); margin: 0 3px; }
+.login-admin-marca .b-ua      { color: var(--dark); }
+.login-admin-titulo {
+  font-size: 19px; font-weight: 800; color: var(--dark);
+  margin-bottom: 4px;
+}
+.login-admin-sub {
+  font-size: 12px; color: var(--muted);
+  margin-bottom: 22px;
+}
+.login-admin-lbl {
+  display: block; text-align: left;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin: 14px 0 6px;
+}
+.login-admin-input {
+  width: 100%; padding: 11px 14px;
+  border: 1.5px solid var(--border); border-radius: 9px;
+  font-size: 14px; color: var(--dark); font-family: inherit;
+  background: var(--bg); outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.login-admin-input:focus { border-color: var(--red); background: var(--white); }
+.login-admin-err {
+  display: none; margin-top: 12px;
+  font-size: 12px; color: var(--red); text-align: left;
+}
+.login-admin-err.vis { display: block; }
+.login-admin-btn {
+  width: 100%; margin-top: 20px;
+  padding: 13px; background: var(--red); color: #fff;
+  border: none; border-radius: 9px;
+  font-size: 14px; font-weight: 700; letter-spacing: 0.03em;
+  cursor: pointer; box-shadow: 0 4px 16px rgba(227,6,19,0.30);
+  transition: background 0.15s, transform 0.1s;
+}
+.login-admin-btn:hover { background: var(--red-dk); }
+.login-admin-btn:active { transform: scale(0.99); }
+
+/* ══════════════════════════════════════════
    HEADER
 ══════════════════════════════════════════ */
 .admin-header {
@@ -850,6 +914,34 @@ body {
 <body>
 
 <!-- ══════════════════════════════════════════
+     LOGIN ADMIN (usuario + contraseña)
+══════════════════════════════════════════ -->
+<div id="login-admin" class="login-admin-overlay">
+  <div class="login-admin-card">
+    <div class="login-admin-marca">
+      <span class="b-bavaria">Bavaria</span><span class="b-x">×</span><span class="b-ua">Unión Andina</span>
+    </div>
+    <div class="login-admin-titulo">Panel de Administración</div>
+    <div class="login-admin-sub">Ingresa tus credenciales de coordinación</div>
+
+    <form id="login-admin-form">
+      <label class="login-admin-lbl">Usuario</label>
+      <input type="text" class="login-admin-input" id="login-usuario" autocomplete="username" required>
+
+      <label class="login-admin-lbl">Contraseña</label>
+      <input type="password" class="login-admin-input" id="login-clave" autocomplete="current-password" required>
+
+      <div class="login-admin-err" id="login-admin-err"></div>
+
+      <button type="submit" class="login-admin-btn">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Contenido del panel: oculto hasta que haya una sesión de admin válida -->
+<div id="panel-admin" style="display:none;">
+
+<!-- ══════════════════════════════════════════
      HEADER
 ══════════════════════════════════════════ -->
 <header class="admin-header">
@@ -1154,28 +1246,72 @@ body {
   </div>
 </div>
 
+</div><!-- /panel-admin -->
+
 <script>
 // ══════════════════════════════════════════
-// PROTECCIÓN DE SESIÓN
+// LOGIN ADMIN (usuario + contraseña)
 // ══════════════════════════════════════════
-// admin.html es una página independiente (no carga Logica.js), así que
-// repite aquí la misma clave de sessionStorage que usa index.html tras
-// el login. Sin una sesión de admin válida, redirige al login y no
-// carga nada más de este script (ni datos ni el panel).
-(function protegerAcceso() {
-  try {
-    const raw = sessionStorage.getItem('jvk_sesion_actual');
-    const datos = raw ? JSON.parse(raw) : null;
-    if (datos && datos.rol === 'admin') return;
-  } catch (e) {}
-  window.location.href = 'index.html';
-  throw new Error('Sin sesión de admin válida — redirigiendo a index.html');
-})();
+// admin.html es una página independiente y ahora es dueña de su propio
+// login: ya no depende de index.html ni de la clave única anterior.
+// La sesión se guarda en localStorage (no sessionStorage) para que no
+// se pierda al cerrar y volver a abrir el navegador.
+const SESION_ADMIN_KEY = 'bxua_sesion';
 
-// Botón "Cerrar sesión" del header: borra la sesión y vuelve al login
+const USUARIOS_ADMIN = [
+  { usuario: 'juaneskdu', clave: 'Juancho043' },
+  { usuario: 'NelsonC',   clave: 'Nelson043' },
+];
+
+// ¿Hay una sesión de admin válida guardada?
+function protegerAcceso() {
+  try {
+    const raw = localStorage.getItem(SESION_ADMIN_KEY);
+    const datos = raw ? JSON.parse(raw) : null;
+    return !!(datos && datos.rol === 'admin');
+  } catch (e) {
+    return false;
+  }
+}
+
+// Muestra el formulario de login y oculta el panel
+function mostrarLoginAdmin() {
+  document.getElementById('panel-admin').style.display = 'none';
+  document.getElementById('login-admin').style.display = 'flex';
+}
+
+// Oculta el login, muestra el panel y arranca la carga de datos
+function mostrarPanelAdmin() {
+  document.getElementById('login-admin').style.display = 'none';
+  document.getElementById('panel-admin').style.display = '';
+  const ahora = new Date();
+  document.getElementById('header-fecha').textContent = fechaLarga(ahora);
+  cargar().then(() => initHistorial());
+}
+
+// Valida usuario/contraseña contra USUARIOS_ADMIN; si es correcto, guarda la sesión y entra
+function intentarLoginAdmin(usuario, clave) {
+  const err = document.getElementById('login-admin-err');
+  const encontrado = USUARIOS_ADMIN.find(u => u.usuario === usuario && u.clave === clave);
+
+  if (!encontrado) {
+    err.textContent = 'Usuario o contraseña incorrectos';
+    err.classList.add('vis');
+    return;
+  }
+
+  err.classList.remove('vis');
+  localStorage.setItem(SESION_ADMIN_KEY, JSON.stringify({ rol: 'admin', usuario: encontrado.usuario }));
+  mostrarPanelAdmin();
+}
+
+// Botón "Cerrar sesión" del header: borra la sesión y vuelve a mostrar el login
 function cerrarSesionAdmin() {
-  sessionStorage.removeItem('jvk_sesion_actual');
-  window.location.href = 'index.html';
+  localStorage.removeItem(SESION_ADMIN_KEY);
+  document.getElementById('login-usuario').value = '';
+  document.getElementById('login-clave').value = '';
+  document.getElementById('login-admin-err').classList.remove('vis');
+  mostrarLoginAdmin();
 }
 
 // ══════════════════════════════════════════
@@ -2622,9 +2758,19 @@ async function descargarExcel() {
 // ARRANQUE
 // ══════════════════════════════════════════
 (function init() {
-  const ahora = new Date();
-  document.getElementById('header-fecha').textContent = fechaLarga(ahora);
-  cargar().then(() => initHistorial());
+  document.getElementById('login-admin-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    intentarLoginAdmin(
+      document.getElementById('login-usuario').value.trim(),
+      document.getElementById('login-clave').value
+    );
+  });
+
+  if (protegerAcceso()) {
+    mostrarPanelAdmin();
+  } else {
+    mostrarLoginAdmin();
+  }
 })();
 </script>
 </body>
