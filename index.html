@@ -55,11 +55,22 @@
 
         <!-- Los chips de conductores se generan dinámicamente en Logica.js
              (renderChipsConductores), leyendo localStorage['bxua_conductores']
-             para reflejar altas/bajas hechas desde el panel de admin.
-             El acceso de Coordinación/Admin ya no vive aquí: tiene su propio
-             login (usuario + contraseña) directamente en admin.html. -->
+             para reflejar altas/bajas hechas desde el panel de admin, y se
+             insertan siempre antes de este chip fijo de Admin. -->
+        <div class="chip-opcion" data-rol="admin" data-val="ADMIN">
+          Coordinación / Admin
+          <div class="chip-sub">Usuario y contraseña</div>
+        </div>
 
       </div><!-- /chips-identidad -->
+
+      <div id="admin-clave-box" style="display:none;margin-top:16px;">
+        <label class="form-lbl">Usuario</label>
+        <input type="text" class="admin-login-input" id="admin-usuario" placeholder="Usuario" autocomplete="username">
+        <label class="form-lbl" style="margin-top:14px;">Contraseña</label>
+        <input type="password" class="admin-login-input" id="admin-clave" placeholder="Contraseña" autocomplete="current-password">
+        <div class="gps-err" id="login-err" style="display:none;"></div>
+      </div>
     </div><!-- /form-card -->
 
     <button class="btn-enviar" id="btn-login">Entrar</button>
