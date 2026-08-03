@@ -1305,13 +1305,11 @@ function intentarLoginAdmin(usuario, clave) {
   mostrarPanelAdmin();
 }
 
-// Botón "Cerrar sesión" del header: borra la sesión y vuelve a mostrar el login
+// Botón "Cerrar sesión" del header: borra la sesión y redirige a index.html
+// (no muestra el formulario de login propio de admin.html).
 function cerrarSesionAdmin() {
   localStorage.removeItem(SESION_ADMIN_KEY);
-  document.getElementById('login-usuario').value = '';
-  document.getElementById('login-clave').value = '';
-  document.getElementById('login-admin-err').classList.remove('vis');
-  mostrarLoginAdmin();
+  window.location.href = 'index.html';
 }
 
 // ══════════════════════════════════════════
