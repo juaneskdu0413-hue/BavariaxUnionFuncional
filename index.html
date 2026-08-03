@@ -56,19 +56,10 @@
         <!-- Los chips de conductores se generan dinámicamente en Logica.js
              (renderChipsConductores), leyendo localStorage['bxua_conductores']
              para reflejar altas/bajas hechas desde el panel de admin.
-             El chip de Admin es el único fijo en el HTML. -->
-        <div class="chip-opcion" data-rol="admin" data-val="ADMIN">
-          Coordinación / Admin
-          <div class="chip-sub">Requiere clave de acceso</div>
-        </div>
+             El acceso de Coordinación/Admin ya no vive aquí: tiene su propio
+             login (usuario + contraseña) directamente en admin.html. -->
 
       </div><!-- /chips-identidad -->
-
-      <div id="admin-clave-box" style="display:none;margin-top:16px;">
-        <label class="form-lbl">Clave de acceso</label>
-        <input type="password" id="admin-clave" placeholder="Ingresa la clave">
-        <div class="gps-err" id="login-err" style="display:none;"></div>
-      </div>
     </div><!-- /form-card -->
 
     <button class="btn-enviar" id="btn-login">Entrar</button>
@@ -111,6 +102,12 @@
       <label class="form-lbl">Nota / lugar (obligatorio)</label>
       <textarea class="form-textarea" id="nota"
         placeholder="Ej: Llegada a puerto, contenedor MSNU2867900 — Cartagena"></textarea>
+
+      <div id="novedad-box" style="display:none;margin-top:18px;">
+        <label class="form-lbl">Novedad del día (opcional)</label>
+        <textarea class="form-textarea" id="novedad"
+          placeholder="Ej: llanta pinchada, cliente no estaba, tráfico en vía Sibaté..."></textarea>
+      </div>
     </div>
 
     <button class="btn-enviar" id="btn-enviar">Confirmar registro</button>

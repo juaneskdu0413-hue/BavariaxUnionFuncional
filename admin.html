@@ -34,6 +34,70 @@ body {
 }
 
 /* ══════════════════════════════════════════
+   LOGIN ADMIN (usuario + contraseña)
+══════════════════════════════════════════ */
+.login-admin-overlay {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
+  padding: 20px;
+}
+.login-admin-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--white);
+  border-radius: 16px;
+  padding: 32px 28px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  text-align: center;
+}
+.login-admin-marca {
+  font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.login-admin-marca .b-bavaria { color: var(--red); }
+.login-admin-marca .b-x       { color: var(--muted); margin: 0 3px; }
+.login-admin-marca .b-ua      { color: var(--dark); }
+.login-admin-titulo {
+  font-size: 19px; font-weight: 800; color: var(--dark);
+  margin-bottom: 4px;
+}
+.login-admin-sub {
+  font-size: 12px; color: var(--muted);
+  margin-bottom: 22px;
+}
+.login-admin-lbl {
+  display: block; text-align: left;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin: 14px 0 6px;
+}
+.login-admin-input {
+  width: 100%; padding: 11px 14px;
+  border: 1.5px solid var(--border); border-radius: 9px;
+  font-size: 14px; color: var(--dark); font-family: inherit;
+  background: var(--bg); outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.login-admin-input:focus { border-color: var(--red); background: var(--white); }
+.login-admin-err {
+  display: none; margin-top: 12px;
+  font-size: 12px; color: var(--red); text-align: left;
+}
+.login-admin-err.vis { display: block; }
+.login-admin-btn {
+  width: 100%; margin-top: 20px;
+  padding: 13px; background: var(--red); color: #fff;
+  border: none; border-radius: 9px;
+  font-size: 14px; font-weight: 700; letter-spacing: 0.03em;
+  cursor: pointer; box-shadow: 0 4px 16px rgba(227,6,19,0.30);
+  transition: background 0.15s, transform 0.1s;
+}
+.login-admin-btn:hover { background: var(--red-dk); }
+.login-admin-btn:active { transform: scale(0.99); }
+
+/* ══════════════════════════════════════════
    HEADER
 ══════════════════════════════════════════ */
 .admin-header {
@@ -207,6 +271,32 @@ body {
   border: 1.5px solid var(--border);
 }
 .btn-outline.activo { background: var(--red); color: #fff; border-color: var(--red); }
+
+/* ══════════════════════════════════════════
+   SEMÁFORO — estado del día por conductor, de un vistazo
+══════════════════════════════════════════ */
+.semaforo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.semaforo-card {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--white); border: 1px solid var(--border); border-left: 4px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.semaforo-card.semaforo-completa { border-left-color: var(--green2); }
+.semaforo-card.semaforo-ruta     { border-left-color: var(--yellow); }
+.semaforo-card.semaforo-sin      { border-left-color: var(--red); }
+.semaforo-icono { font-size: 18px; flex-shrink: 0; }
+.semaforo-info { min-width: 0; flex: 1; }
+.semaforo-nombre {
+  font-size: 12px; font-weight: 700; color: var(--dark);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.semaforo-hora { font-size: 11px; color: #999; margin-top: 1px; }
 
 /* ══════════════════════════════════════════
    TOOLBAR / FILTROS
@@ -824,6 +914,34 @@ body {
 <body>
 
 <!-- ══════════════════════════════════════════
+     LOGIN ADMIN (usuario + contraseña)
+══════════════════════════════════════════ -->
+<div id="login-admin" class="login-admin-overlay">
+  <div class="login-admin-card">
+    <div class="login-admin-marca">
+      <span class="b-bavaria">Bavaria</span><span class="b-x">×</span><span class="b-ua">Unión Andina</span>
+    </div>
+    <div class="login-admin-titulo">Panel de Administración</div>
+    <div class="login-admin-sub">Ingresa tus credenciales de coordinación</div>
+
+    <form id="login-admin-form">
+      <label class="login-admin-lbl">Usuario</label>
+      <input type="text" class="login-admin-input" id="login-usuario" autocomplete="username" required>
+
+      <label class="login-admin-lbl">Contraseña</label>
+      <input type="password" class="login-admin-input" id="login-clave" autocomplete="current-password" required>
+
+      <div class="login-admin-err" id="login-admin-err"></div>
+
+      <button type="submit" class="login-admin-btn">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Contenido del panel: oculto hasta que haya una sesión de admin válida -->
+<div id="panel-admin" style="display:none;">
+
+<!-- ══════════════════════════════════════════
      HEADER
 ══════════════════════════════════════════ -->
 <header class="admin-header">
@@ -877,12 +995,19 @@ body {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     Conductores
   </button>
+  <button class="tab-btn" id="tab-alertas" onclick="cambiarSeccion('alertas')">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    Alertas
+  </button>
 </nav>
 
 <!-- ══════════════════════════════════════════
      SECCIÓN 1: DASHBOARD DEL DÍA
 ══════════════════════════════════════════ -->
 <section class="seccion activo" id="sec-dashboard">
+
+  <!-- Semáforo compacto: estado del día por conductor, de un vistazo -->
+  <div class="semaforo-grid" id="semaforo-grid"></div>
 
   <div class="toolbar">
     <button class="btn btn-red" onclick="cargar()">
@@ -1064,6 +1189,26 @@ body {
 </section>
 
 <!-- ══════════════════════════════════════════
+     SECCIÓN 5: ALERTAS (checkout pendiente)
+══════════════════════════════════════════ -->
+<section class="seccion" id="sec-alertas">
+
+  <div class="toolbar">
+    <button class="btn btn-red" onclick="renderAlertas()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Actualizar
+    </button>
+  </div>
+
+  <div class="hist-panel" style="margin-bottom:16px;">
+    <strong>Checkout pendiente:</strong> conductores que registraron "Inicio jornada" hoy pero todavía no han registrado "Fin jornada". Se actualiza automáticamente cada 5 minutos mientras esta pestaña esté abierta.
+  </div>
+
+  <div id="alertas-contenido"></div>
+
+</section>
+
+<!-- ══════════════════════════════════════════
      MODAL RESUMEN GENERAL
 ══════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-resumen" onclick="cerrarModalSiOverlay(event)">
@@ -1101,28 +1246,72 @@ body {
   </div>
 </div>
 
+</div><!-- /panel-admin -->
+
 <script>
 // ══════════════════════════════════════════
-// PROTECCIÓN DE SESIÓN
+// LOGIN ADMIN (usuario + contraseña)
 // ══════════════════════════════════════════
-// admin.html es una página independiente (no carga Logica.js), así que
-// repite aquí la misma clave de sessionStorage que usa index.html tras
-// el login. Sin una sesión de admin válida, redirige al login y no
-// carga nada más de este script (ni datos ni el panel).
-(function protegerAcceso() {
-  try {
-    const raw = sessionStorage.getItem('bxua_sesion');
-    const datos = raw ? JSON.parse(raw) : null;
-    if (datos && datos.rol === 'admin') return;
-  } catch (e) {}
-  window.location.href = 'index.html';
-  throw new Error('Sin sesión de admin válida — redirigiendo a index.html');
-})();
+// admin.html es una página independiente y ahora es dueña de su propio
+// login: ya no depende de index.html ni de la clave única anterior.
+// La sesión se guarda en localStorage (no sessionStorage) para que no
+// se pierda al cerrar y volver a abrir el navegador.
+const SESION_ADMIN_KEY = 'bxua_sesion';
 
-// Botón "Cerrar sesión" del header: borra la sesión y vuelve al login
+const USUARIOS_ADMIN = [
+  { usuario: 'juaneskdu', clave: 'Juancho043' },
+  { usuario: 'NelsonC',   clave: 'Nelson043' },
+];
+
+// ¿Hay una sesión de admin válida guardada?
+function protegerAcceso() {
+  try {
+    const raw = localStorage.getItem(SESION_ADMIN_KEY);
+    const datos = raw ? JSON.parse(raw) : null;
+    return !!(datos && datos.rol === 'admin');
+  } catch (e) {
+    return false;
+  }
+}
+
+// Muestra el formulario de login y oculta el panel
+function mostrarLoginAdmin() {
+  document.getElementById('panel-admin').style.display = 'none';
+  document.getElementById('login-admin').style.display = 'flex';
+}
+
+// Oculta el login, muestra el panel y arranca la carga de datos
+function mostrarPanelAdmin() {
+  document.getElementById('login-admin').style.display = 'none';
+  document.getElementById('panel-admin').style.display = '';
+  const ahora = new Date();
+  document.getElementById('header-fecha').textContent = fechaLarga(ahora);
+  cargar().then(() => initHistorial());
+}
+
+// Valida usuario/contraseña contra USUARIOS_ADMIN; si es correcto, guarda la sesión y entra
+function intentarLoginAdmin(usuario, clave) {
+  const err = document.getElementById('login-admin-err');
+  const encontrado = USUARIOS_ADMIN.find(u => u.usuario === usuario && u.clave === clave);
+
+  if (!encontrado) {
+    err.textContent = 'Usuario o contraseña incorrectos';
+    err.classList.add('vis');
+    return;
+  }
+
+  err.classList.remove('vis');
+  localStorage.setItem(SESION_ADMIN_KEY, JSON.stringify({ rol: 'admin', usuario: encontrado.usuario }));
+  mostrarPanelAdmin();
+}
+
+// Botón "Cerrar sesión" del header: borra la sesión y vuelve a mostrar el login
 function cerrarSesionAdmin() {
-  sessionStorage.removeItem('bxua_sesion');
-  window.location.href = 'index.html';
+  localStorage.removeItem(SESION_ADMIN_KEY);
+  document.getElementById('login-usuario').value = '';
+  document.getElementById('login-clave').value = '';
+  document.getElementById('login-admin-err').classList.remove('vis');
+  mostrarLoginAdmin();
 }
 
 // ══════════════════════════════════════════
@@ -1168,6 +1357,9 @@ const WA_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentCol
 // Estado global cargado desde Google Sheets y filtro activo del dashboard del día
 let todosRegistros = [];
 let filtroActivo   = 'todos';
+
+// ID del setInterval de auto-refresco de la pestaña Alertas (null cuando no está activa)
+let alertasIntervalId = null;
 
 // ══════════════════════════════════════════
 // UTILIDADES
@@ -1281,13 +1473,18 @@ function eliminarConductor(idx) {
 // ══════════════════════════════════════════
 // Muestra la pestaña `sec` y oculta las demás; refresca el contenido de la pestaña recién activada
 function cambiarSeccion(sec) {
-  ['dashboard','historial','informes','conductores'].forEach(s => {
+  ['dashboard','historial','informes','conductores','alertas'].forEach(s => {
     document.getElementById('sec-' + s).classList.toggle('activo', s === sec);
     document.getElementById('tab-' + s).classList.toggle('activo', s === sec);
   });
   if (sec === 'historial')   renderHistorial();
   if (sec === 'informes')    xInicializar();
   if (sec === 'conductores') renderConductores();
+  if (sec === 'alertas')     renderAlertas();
+
+  // Auto-refresco cada 5 minutos: solo corre mientras la pestaña Alertas esté activa
+  if (alertasIntervalId) { clearInterval(alertasIntervalId); alertasIntervalId = null; }
+  if (sec === 'alertas') alertasIntervalId = setInterval(renderAlertas, 5 * 60 * 1000);
 }
 
 // ══════════════════════════════════════════
@@ -1303,6 +1500,7 @@ async function cargar() {
     const res = await fetch(APPS_SCRIPT_URL);
     todosRegistros = await res.json();
     if (!Array.isArray(todosRegistros)) throw new Error('Formato inesperado');
+    renderSemaforo();
     renderFiltros();
     renderTarjetas();
   } catch (e) {
@@ -1327,6 +1525,109 @@ function agruparRegistrosPorConductor(regs) {
     porConductor[nombre].push(r);
   });
   return porConductor;
+}
+
+// Emoji e clase CSS del semáforo según el estado de jornada del conductor
+const SEMAFORO_CONFIG = {
+  completa: { emoji: '🟢', clase: 'semaforo-completa' },
+  ruta:     { emoji: '🟡', clase: 'semaforo-ruta' },
+  parcial:  { emoji: '🔴', clase: 'semaforo-sin' },
+  sin:      { emoji: '🔴', clase: 'semaforo-sin' },
+};
+
+// Dibuja el semáforo compacto: un vistazo rápido del estado de TODOS los conductores fijos,
+// sin importar el filtro por conductor activo del dashboard (a diferencia de renderTarjetas)
+function renderSemaforo() {
+  const grid = document.getElementById('semaforo-grid');
+  if (!grid) return;
+
+  const hoy = hoyKey();
+  const registrosHoy = todosRegistros.filter(r => String(r.fecha).slice(0,10) === hoy);
+  const porConductor = agruparRegistrosPorConductor(registrosHoy);
+
+  grid.innerHTML = CONDUCTORES_FIJOS.map(c => {
+    const d = datosCondutor(c.nombre, porConductor);
+    const cfg = SEMAFORO_CONFIG[d.estadoKey];
+    const ultimoRegistro = d.regs.length ? d.regs[d.regs.length - 1] : null;
+    const horaTxt = ultimoRegistro ? horaDesdeTimestamp(ultimoRegistro.timestamp) : 'Sin registros hoy';
+    return `
+      <div class="semaforo-card ${cfg.clase}">
+        <div class="semaforo-icono">${cfg.emoji}</div>
+        <div class="semaforo-info">
+          <div class="semaforo-nombre">${esc(c.nombre)}</div>
+          <div class="semaforo-hora">${ultimoRegistro ? 'Último registro: ' + horaTxt : horaTxt}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// ALERTAS — checkout pendiente
+// ══════════════════════════════════════════
+// Dibuja la tabla de conductores con "Inicio jornada" hoy pero sin "Fin jornada" todavía
+function renderAlertas() {
+  const cont = document.getElementById('alertas-contenido');
+  if (!cont) return;
+
+  const hoy = hoyKey();
+  const registrosHoy = todosRegistros.filter(r => String(r.fecha).slice(0,10) === hoy);
+  const porConductor = agruparRegistrosPorConductor(registrosHoy);
+
+  const pendientes = CONDUCTORES_FIJOS
+    .map((c, idx) => ({ idx, conductor: c, datos: datosCondutor(c.nombre, porConductor) }))
+    .filter(x => x.datos.estadoKey === 'ruta');
+
+  if (pendientes.length === 0) {
+    cont.innerHTML = `<div class="sin-registros">✓ Sin alertas — ningún conductor con checkout pendiente hoy.</div>`;
+    return;
+  }
+
+  const filas = pendientes.map(({ idx, conductor, datos }) => `
+    <tr>
+      <td class="td-nombre">${esc(conductor.nombre)}</td>
+      <td><span class="td-placa">${esc(conductor.placa)}</span></td>
+      <td class="td-hora">${horaDesdeTimestamp(datos.inicio.timestamp)}</td>
+      <td class="td-estado"><button class="btn btn-red" onclick="cerrarManualmente(${idx})">Cerrar manualmente</button></td>
+    </tr>`).join('');
+
+  cont.innerHTML = `
+    <table class="resumen-tabla">
+      <thead>
+        <tr><th>Conductor</th><th>Placa</th><th class="centro">Check-in</th><th class="centro">Acción</th></tr>
+      </thead>
+      <tbody>${filas}</tbody>
+    </table>`;
+}
+
+// Registra un "Fin jornada" manual (con nota fija) para un conductor con checkout pendiente
+async function cerrarManualmente(idx) {
+  const conductor = CONDUCTORES_FIJOS[idx];
+  if (!conductor) return;
+  const ok = confirm(`¿Cerrar la jornada de ${conductor.nombre} manualmente?\nSe registrará un "Fin jornada" con la hora actual.`);
+  if (!ok) return;
+
+  const ahora = new Date();
+  const registro = {
+    id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+    conductor: conductor.nombre,
+    placa: conductor.placa,
+    tipo: 'Fin jornada',
+    nota: 'Cierre manual por coordinador',
+    lat: null,
+    lng: null,
+    precision: null,
+    timestamp: ahora.toISOString(),
+    fecha: `${ahora.getFullYear()}-${pad(ahora.getMonth() + 1)}-${pad(ahora.getDate())}`,
+  };
+
+  try {
+    await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(registro) });
+    await cargar();
+    renderAlertas();
+  } catch (e) {
+    alert('No se pudo cerrar la jornada. Verifica tu conexión e intenta de nuevo.');
+    console.error(e);
+  }
 }
 
 // Dibuja los botones de filtro por conductor (solo los que tuvieron actividad hoy)
@@ -2457,9 +2758,19 @@ async function descargarExcel() {
 // ARRANQUE
 // ══════════════════════════════════════════
 (function init() {
-  const ahora = new Date();
-  document.getElementById('header-fecha').textContent = fechaLarga(ahora);
-  cargar().then(() => initHistorial());
+  document.getElementById('login-admin-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    intentarLoginAdmin(
+      document.getElementById('login-usuario').value.trim(),
+      document.getElementById('login-clave').value
+    );
+  });
+
+  if (protegerAcceso()) {
+    mostrarPanelAdmin();
+  } else {
+    mostrarLoginAdmin();
+  }
 })();
 </script>
 </body>

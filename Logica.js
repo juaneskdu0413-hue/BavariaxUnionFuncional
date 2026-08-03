@@ -6,7 +6,7 @@
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybeK--ANSECbaOHO4sspV3111fnO5ya5xCi5qiqhpx8K_8nI6W1xZloBToZhTDbOkAEQ/exec';
 
 const STORAGE_KEY = 'jvk_checkins_registros';
-const SESION_KEY = 'bxua_sesion';
+const SESION_KEY = 'jvk_sesion_actual';
 
 // Misma clave que usa admin.html (pestaña "Conductores") para guardar la lista
 // de conductores activos. Si el panel de admin agrega/elimina conductores,
@@ -24,12 +24,6 @@ const CONDUCTORES_DEFAULT = [
   { nombre: 'WALTER YESID PACHON RODRIGUEZ', cedula: '1104698940', placa: 'JVK128' },
 ];
 
-// ⚠️ Clave de admin: cámbiala por la que quieras usar.
-// Esto es solo una barrera simple para evitar que los conductores
-// abran el panel por error. No es seguridad robusta (el código es
-// público y cualquiera con acceso al archivo puede verla).
-const CLAVE_ADMIN = 'Juancho043';
-
 // ════════════════════════════════════════════════════════
 // ESTADO
 // ════════════════════════════════════════════════════════
@@ -40,7 +34,7 @@ let gpsLat = null;
 let gpsLng = null;
 let gpsPrecision = null;
 let filtroActivo = 'todos';
-let sesion = null; // { rol: 'conductor'|'admin', nombre, placa }
+let sesion = null; // { rol: 'conductor', nombre, placa }
 
 // ════════════════════════════════════════════════════════
 // INICIALIZACIÓN
@@ -56,17 +50,12 @@ function restaurarSesion() {
   try {
     const raw = sessionStorage.getItem(SESION_KEY);
     if (raw) {
-      const datos = JSON.parse(raw);    // sesion activa - directo al panel admin
-      if (datos.rol === 'admin') {
-        sesion = datos;
-        window.location.href = 'admin.html';
-        return;
-      } 
-      if(datos.rol === 'conductor'){
+      const datos = JSON.parse(raw);
+      // Validar que el rol sea uno de los permitidos
+      if (datos.rol === 'conductor') {
         sesion = datos;
         entrarConSesion();
-      }
-      else {
+      } else {
         sessionStorage.removeItem(SESION_KEY);
       }
     }
@@ -109,21 +98,16 @@ function crearChipConductor(c) {
   return div;
 }
 
-// Inserta los chips de conductores (desde localStorage) antes del chip fijo
-// de "Coordinación / Admin", que se mantiene estático en el HTML.
+// Inserta los chips de conductores (desde localStorage) en #chips-identidad.
+// El acceso de Coordinación/Admin ya no vive en este archivo (ver admin.html).
 function renderChipsConductores() {
   const contenedor = document.getElementById('chips-identidad');
   if (!contenedor) return;
-  const chipAdmin = contenedor.querySelector('.chip-opcion[data-rol="admin"]');
 
   contenedor.querySelectorAll('.chip-opcion[data-rol="conductor"]').forEach(el => el.remove());
 
   const conductores = obtenerConductoresGuardados();
-  conductores.forEach(c => {
-    const chip = crearChipConductor(c);
-    if (chipAdmin) contenedor.insertBefore(chip, chipAdmin);
-    else contenedor.appendChild(chip);
-  });
+  conductores.forEach(c => contenedor.appendChild(crearChipConductor(c)));
 }
 
 function inicializarLogin() {
@@ -137,54 +121,30 @@ function inicializarLogin() {
       seleccionarChip('#chips-identidad', c);
       rolElegido = c.dataset.rol;
       datosElegidos = { nombre: c.dataset.val, placa: c.dataset.placa || null };
-      document.getElementById('admin-clave-box').style.display = (rolElegido === 'admin') ? 'block' : 'none';
-      document.getElementById('login-err').style.display = 'none';
     });
   });
 
   document.getElementById('btn-login').addEventListener('click', () => {
-    const err = document.getElementById('login-err');
-    err.style.display = 'none';
-
     if (!rolElegido) { alert('Selecciona quién eres.'); return; }
 
-    if (rolElegido === 'admin') {
-      const clave = document.getElementById('admin-clave').value;
-      if (clave !== CLAVE_ADMIN) {
-        err.textContent = 'Clave incorrecta.';
-        err.style.display = 'block';
-        return;
-      }
-      sesion = { rol: 'admin', nombre: 'Coordinación' };
-      sessionStorage.setItem(SESION_KEY,JSON.stringify(sesion));
-      window.location.href = 'admin.html';
-      return;
-    } 
-      sesion = { rol: 'conductor', nombre: datosElegidos.nombre, placa: datosElegidos.placa };
-      sessionStorage.setItem(SESION_KEY, JSON.stringify(sesion));
+    sesion = { rol: 'conductor', nombre: datosElegidos.nombre, placa: datosElegidos.placa };
+    sessionStorage.setItem(SESION_KEY, JSON.stringify(sesion));
     entrarConSesion();
-  })
+  });
 }
 
 function entrarConSesion() {
   document.getElementById('vista-login').classList.remove('activa');
   document.getElementById('tabs-nav').style.display = 'flex';
 
-  if (sesion.rol === 'admin') {
-    // Admin: solo ve el Panel de Coordinación
-    document.getElementById('tab-conductor').style.display = 'none';
-    document.getElementById('tab-panel').style.display = 'inline-block';
-    cambiarVista('panel');
-  } else {
-    // Conductor: solo ve su formulario de registro, con su nombre/placa fijos
-    document.getElementById('tab-conductor').style.display = 'inline-block';
-    document.getElementById('tab-panel').style.display = 'none';
-    conductorSel = sesion.nombre;
-    placaSel = sesion.placa;
-    document.getElementById('conductor-fijo').textContent = sesion.nombre;
-    document.getElementById('placa-fija').textContent = sesion.placa;
-    cambiarVista('conductor');
-  }
+  // Solo hay un rol posible aquí: conductor. El acceso de admin vive en admin.html.
+  document.getElementById('tab-conductor').style.display = 'inline-block';
+  document.getElementById('tab-panel').style.display = 'none';
+  conductorSel = sesion.nombre;
+  placaSel = sesion.placa;
+  document.getElementById('conductor-fijo').textContent = sesion.nombre;
+  document.getElementById('placa-fija').textContent = sesion.placa;
+  cambiarVista('conductor');
 }
 
 function cerrarSesion() {
@@ -196,8 +156,6 @@ function cerrarSesion() {
   document.querySelectorAll('.vista').forEach(el => el.classList.remove('activa'));
   document.getElementById('vista-login').classList.add('activa');
   document.querySelectorAll('#chips-identidad .chip-opcion').forEach(x => x.classList.remove('sel'));
-  document.getElementById('admin-clave-box').style.display = 'none';
-  document.getElementById('admin-clave').value = '';
 }
 
 function seleccionarChip(grupoSelector, elementoSeleccionado) {
@@ -216,6 +174,10 @@ function inicializarBotones() {
     c.addEventListener('click', () => {
       seleccionarChip('#chips-tipo', c);
       tipoSel = c.dataset.val;
+      // "Novedad del día" solo aplica a check-in (Inicio jornada) y checkout (Fin jornada)
+      const mostrarNovedad = tipoSel === 'Inicio jornada' || tipoSel === 'Fin jornada';
+      document.getElementById('novedad-box').style.display = mostrarNovedad ? 'block' : 'none';
+      if (!mostrarNovedad) document.getElementById('novedad').value = '';
     });
   });
 }
@@ -292,6 +254,7 @@ function onGPSError(error) {
 // ════════════════════════════════════════════════════════
 async function enviarCheckin() {
   const nota = document.getElementById('nota').value.trim();
+  const novedad = document.getElementById('novedad').value.trim();
 
   if (!conductorSel) { alert('Selecciona el conductor.'); return; }
   if (!placaSel)     { alert('Selecciona el vehículo.'); return; }
@@ -309,6 +272,7 @@ async function enviarCheckin() {
     placa: placaSel,
     tipo: tipoSel,
     nota: nota,
+    novedad: novedad,
     lat: gpsLat,
     lng: gpsLng,
     precision: gpsPrecision,
@@ -342,6 +306,8 @@ function mostrarConfirmacion(registro, ahora) {
 
 function resetearFormularioParcial() {
   document.getElementById('nota').value = '';
+  document.getElementById('novedad').value = '';
+  document.getElementById('novedad-box').style.display = 'none';
   document.querySelectorAll('#chips-tipo .chip-opcion').forEach(x => x.classList.remove('sel'));
   tipoSel = null;
   gpsLat = null; gpsLng = null; gpsPrecision = null;
