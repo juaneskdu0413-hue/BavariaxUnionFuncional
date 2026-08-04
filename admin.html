@@ -1258,17 +1258,25 @@ body {
 // se pierda al cerrar y volver a abrir el navegador.
 const SESION_ADMIN_KEY = 'bxua_sesion';
 
+// "admin": acceso completo. "cliente": panel de solo lectura (sin gestión
+// de conductores ni cierre manual de alertas) — ver aplicarRestriccionesPorRol().
 const USUARIOS_ADMIN = [
-  { usuario: 'juaneskdu', clave: 'Juancho043' },
-  { usuario: 'NelsonC',   clave: 'Nelson043' },
+  { usuario: 'juaneskdu', clave: 'Juancho043', rol: 'admin' },
+  { usuario: 'NelsonC',   clave: 'Nelson043',  rol: 'admin' },
+  { usuario: 'UnionA',    clave: 'UnionXB',    rol: 'cliente' },
 ];
+const ROLES_PERMITIDOS = ['admin', 'cliente'];
 
-// ¿Hay una sesión de admin válida guardada?
+// Rol de la sesión actual, fijado en mostrarPanelAdmin(). Controla qué
+// partes del panel se ocultan para el rol 'cliente'.
+let rolActual = null;
+
+// ¿Hay una sesión válida guardada (admin o cliente)?
 function protegerAcceso() {
   try {
     const raw = localStorage.getItem(SESION_ADMIN_KEY);
     const datos = raw ? JSON.parse(raw) : null;
-    return !!(datos && datos.rol === 'admin');
+    return !!(datos && ROLES_PERMITIDOS.includes(datos.rol));
   } catch (e) {
     return false;
   }
@@ -1280,10 +1288,27 @@ function mostrarLoginAdmin() {
   document.getElementById('login-admin').style.display = 'flex';
 }
 
+// Oculta/muestra las partes del panel exclusivas de admin según el rol de la sesión.
+// El rol 'cliente' no gestiona conductores ni puede cerrar jornadas manualmente;
+// el resto del panel (Dashboard, Semáforo, Historial, Alertas, Informes) es igual.
+function aplicarRestriccionesPorRol(rol) {
+  const esCliente = rol === 'cliente';
+  document.getElementById('tab-conductores').style.display = esCliente ? 'none' : '';
+}
+
 // Oculta el login, muestra el panel y arranca la carga de datos
 function mostrarPanelAdmin() {
   document.getElementById('login-admin').style.display = 'none';
   document.getElementById('panel-admin').style.display = '';
+
+  try {
+    const datos = JSON.parse(localStorage.getItem(SESION_ADMIN_KEY));
+    rolActual = (datos && datos.rol) || 'admin';
+  } catch (e) {
+    rolActual = 'admin';
+  }
+  aplicarRestriccionesPorRol(rolActual);
+
   const ahora = new Date();
   document.getElementById('header-fecha').textContent = fechaLarga(ahora);
   cargar().then(() => initHistorial());
@@ -1301,7 +1326,7 @@ function intentarLoginAdmin(usuario, clave) {
   }
 
   err.classList.remove('vis');
-  localStorage.setItem(SESION_ADMIN_KEY, JSON.stringify({ rol: 'admin', usuario: encontrado.usuario }));
+  localStorage.setItem(SESION_ADMIN_KEY, JSON.stringify({ rol: encontrado.rol, usuario: encontrado.usuario }));
   mostrarPanelAdmin();
 }
 
@@ -1471,6 +1496,7 @@ function eliminarConductor(idx) {
 // ══════════════════════════════════════════
 // Muestra la pestaña `sec` y oculta las demás; refresca el contenido de la pestaña recién activada
 function cambiarSeccion(sec) {
+  if (sec === 'conductores' && rolActual === 'cliente') sec = 'dashboard'; // el rol cliente no gestiona conductores
   ['dashboard','historial','informes','conductores','alertas'].forEach(s => {
     document.getElementById('sec-' + s).classList.toggle('activo', s === sec);
     document.getElementById('tab-' + s).classList.toggle('activo', s === sec);
@@ -1580,12 +1606,13 @@ function renderAlertas() {
     return;
   }
 
+  // El rol 'cliente' ve las alertas pero no puede cerrar jornadas manualmente
   const filas = pendientes.map(({ idx, conductor, datos }) => `
     <tr>
       <td class="td-nombre">${esc(conductor.nombre)}</td>
       <td><span class="td-placa">${esc(conductor.placa)}</span></td>
       <td class="td-hora">${horaDesdeTimestamp(datos.inicio.timestamp)}</td>
-      <td class="td-estado"><button class="btn btn-red" onclick="cerrarManualmente(${idx})">Cerrar manualmente</button></td>
+      <td class="td-estado">${rolActual === 'cliente' ? '—' : `<button class="btn btn-red" onclick="cerrarManualmente(${idx})">Cerrar manualmente</button>`}</td>
     </tr>`).join('');
 
   cont.innerHTML = `
@@ -1599,6 +1626,7 @@ function renderAlertas() {
 
 // Registra un "Fin jornada" manual (con nota fija) para un conductor con checkout pendiente
 async function cerrarManualmente(idx) {
+  if (rolActual === 'cliente') return; // el rol cliente no puede cerrar jornadas manualmente
   const conductor = CONDUCTORES_FIJOS[idx];
   if (!conductor) return;
   const ok = confirm(`¿Cerrar la jornada de ${conductor.nombre} manualmente?\nSe registrará un "Fin jornada" con la hora actual.`);

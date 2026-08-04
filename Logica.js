@@ -9,14 +9,17 @@ const STORAGE_KEY = 'jvk_checkins_registros';
 const SESION_KEY = 'jvk_sesion_actual';
 
 // Misma clave y formato que usa admin.html para su propia sesión de admin
-// ({ rol: 'admin', usuario }, en localStorage). Login exitoso aquí redirige
-// directo a admin.html, que reconoce esa sesión sin pedir credenciales de nuevo.
+// ({ rol, usuario }, en localStorage). Login exitoso aquí redirige directo
+// a admin.html, que reconoce esa sesión sin pedir credenciales de nuevo.
 const SESION_ADMIN_KEY = 'bxua_sesion';
 
-// Misma lista de usuarios autorizados que admin.html.
+// Misma lista de usuarios autorizados que admin.html. "admin" tiene acceso
+// completo al panel; "cliente" es de solo lectura (ver aplicarRestriccionesPorRol
+// en admin.html).
 const USUARIOS_ADMIN = [
-  { usuario: 'juaneskdu', clave: 'Juancho043' },
-  { usuario: 'NelsonC',   clave: 'Nelson043' },
+  { usuario: 'juaneskdu', clave: 'Juancho043', rol: 'admin' },
+  { usuario: 'NelsonC',   clave: 'Nelson043',  rol: 'admin' },
+  { usuario: 'UnionA',    clave: 'UnionXB',    rol: 'cliente' },
 ];
 
 // Misma clave que usa admin.html (pestaña "Conductores") para guardar la lista
@@ -158,7 +161,7 @@ function inicializarLogin() {
       }
 
       err.classList.remove('vis');
-      localStorage.setItem(SESION_ADMIN_KEY, JSON.stringify({ rol: 'admin', usuario: encontrado.usuario }));
+      localStorage.setItem(SESION_ADMIN_KEY, JSON.stringify({ rol: encontrado.rol, usuario: encontrado.usuario }));
       window.location.href = 'admin.html';
       return;
     }
