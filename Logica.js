@@ -20,6 +20,7 @@ const USUARIOS_ADMIN = [
   { usuario: 'juaneskdu', clave: 'Juancho043', rol: 'admin' },
   { usuario: 'NelsonC',   clave: 'Nelson043',  rol: 'admin' },
   { usuario: 'UnionA',    clave: 'UnionXB',    rol: 'cliente' },
+  { usuario: 'andresfp',  clave: 'andres123',  rol: 'admin' },
 ];
 
 // Misma clave que usa admin.html (pestaña "Conductores") para guardar la lista
