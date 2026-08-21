@@ -213,12 +213,35 @@ function inicializarBotones() {
     c.addEventListener('click', () => {
       seleccionarChip('#chips-tipo', c);
       tipoSel = c.dataset.val;
-      // "Novedad del día" solo aplica a check-in (Inicio jornada) y checkout (Fin jornada)
-      const mostrarNovedad = tipoSel === 'Inicio jornada' || tipoSel === 'Fin jornada';
-      document.getElementById('novedad-box').style.display = mostrarNovedad ? 'block' : 'none';
-      if (!mostrarNovedad) document.getElementById('novedad').value = '';
+      actualizarNovedadBox();
     });
   });
+}
+
+// Ajusta visibilidad, etiqueta, placeholder y obligatoriedad del campo "novedad"
+// según el tipo de evento seleccionado: Entrada taller la exige, Salida taller
+// y los tipos de jornada la dejan opcional, y el resto la oculta.
+function actualizarNovedadBox() {
+  const box = document.getElementById('novedad-box');
+  const label = document.getElementById('novedad-label');
+  const campo = document.getElementById('novedad');
+
+  if (tipoSel === 'Entrada taller') {
+    box.style.display = 'block';
+    label.textContent = 'Novedad / motivo (obligatorio)';
+    campo.placeholder = 'Describe la novedad o motivo del mantenimiento...';
+  } else if (tipoSel === 'Salida taller') {
+    box.style.display = 'block';
+    label.textContent = 'Novedad / motivo (opcional)';
+    campo.placeholder = 'Observaciones de salida (opcional)...';
+  } else if (tipoSel === 'Inicio jornada' || tipoSel === 'Fin jornada') {
+    box.style.display = 'block';
+    label.textContent = 'Novedad del día (opcional)';
+    campo.placeholder = 'Ej: llanta pinchada, cliente no estaba, tráfico en vía Sibaté...';
+  } else {
+    box.style.display = 'none';
+    campo.value = '';
+  }
 }
 
 function inicializarTabs() {
@@ -299,6 +322,7 @@ async function enviarCheckin() {
   if (!placaSel)     { alert('Selecciona el vehículo.'); return; }
   if (!tipoSel)      { alert('Selecciona el tipo de registro.'); return; }
   if (!nota)         { alert('Escribe una nota o el lugar donde estás.'); return; }
+  if (tipoSel === 'Entrada taller' && !novedad) { alert('Describe la novedad o motivo del mantenimiento.'); return; }
 
   const btnEnviar = document.getElementById('btn-enviar');
   btnEnviar.disabled = true;
