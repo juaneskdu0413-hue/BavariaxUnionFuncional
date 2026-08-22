@@ -91,7 +91,7 @@ body {
   padding: 13px; background: var(--red); color: #fff;
   border: none; border-radius: 9px;
   font-size: 14px; font-weight: 700; letter-spacing: 0.03em;
-  cursor: pointer; box-shadow: 0 4px 16px rgba(227,6,19,0.30);
+  cursor: pointer;
   transition: background 0.15s, transform 0.1s;
 }
 .login-admin-btn:hover { background: var(--red-dk); }
@@ -283,14 +283,19 @@ body {
 }
 .semaforo-card {
   display: flex; align-items: center; gap: 10px;
-  background: var(--white); border: 1px solid var(--border); border-left: 4px solid var(--border);
+  background: var(--white); border: 1px solid var(--border);
   border-radius: 10px; padding: 10px 14px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
-.semaforo-card.semaforo-completa { border-left-color: var(--green2); }
-.semaforo-card.semaforo-ruta     { border-left-color: var(--yellow); }
-.semaforo-card.semaforo-sin      { border-left-color: var(--red); }
-.semaforo-icono { font-size: 18px; flex-shrink: 0; }
+.semaforo-icono {
+  font-size: 15px; flex-shrink: 0;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: #f3f4f6;
+}
+.semaforo-card.semaforo-completa .semaforo-icono { background: var(--green-lt); }
+.semaforo-card.semaforo-ruta     .semaforo-icono { background: var(--yellow-lt); }
+.semaforo-card.semaforo-sin      .semaforo-icono { background: #fee2e2; }
 .semaforo-info { min-width: 0; flex: 1; }
 .semaforo-nombre {
   font-size: 12px; font-weight: 700; color: var(--dark);
