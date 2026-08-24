@@ -15,7 +15,7 @@
   --dark-mid:     #3D4450;
   --ink-light:    #6B7280;
   --border:       #D1D9E4;
-  --page-bg:      #F0F1F3;
+  --page-bg:      #F5F6FA;
   --white:        #FFFFFF;
 
   --s-green:      #0E7C4A;
@@ -28,7 +28,7 @@
 
   --shadow-sm:    0 1px 4px rgba(0,0,0,.07);
   --shadow-md:    0 4px 18px rgba(0,0,0,.11);
-  --shadow-card:  0 8px 40px rgba(0,0,0,.22);
+  --shadow-card:  0 8px 40px rgba(17,20,24,.14);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -47,7 +47,7 @@ body {
    TOPBAR
 ═══════════════════════════════════ */
 .topbar {
-  background: #111418;
+  background: var(--white);
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -56,7 +56,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 16px rgba(0,0,0,.40);
+  box-shadow: 0 1px 3px rgba(17,20,24,.06);
   border-bottom: 3px solid transparent;
   border-image: linear-gradient(90deg, var(--bav-red) 50%, var(--ua-green) 50%) 1;
 }
@@ -79,26 +79,26 @@ body {
   line-height: 1;
 }
 .marca-bavaria { color: var(--bav-red); }
-.marca-x       { color: rgba(255,255,255,.25); font-weight: 200; margin: 0 4px; }
-.marca-ua      { color: var(--ua-yellow); }
+.marca-x       { color: var(--ink-light); font-weight: 200; margin: 0 4px; }
+.marca-ua      { color: var(--ua-green-dk); }
 .topbar-marca-sub {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 9px;
   letter-spacing: .18em;
   text-transform: uppercase;
-  color: rgba(255,255,255,.30);
+  color: var(--ink-light);
   margin-top: 2px;
 }
 
 .tabs { display: flex; align-items: center; gap: 2px; margin-left: 16px; }
 .tab-btn {
-  padding: 8px 14px; background: transparent; color: rgba(255,255,255,.40);
+  padding: 8px 14px; background: transparent; color: var(--ink-light);
   border: none; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600;
   letter-spacing: .07em; text-transform: uppercase; cursor: pointer;
   border-bottom: 2px solid transparent; transition: color .15s, border-color .15s;
 }
-.tab-btn.activo { color: white; border-bottom-color: var(--bav-red); }
-.tab-btn:hover:not(.activo) { color: rgba(255,255,255,.75); }
+.tab-btn.activo { color: var(--dark); border-bottom-color: var(--bav-red); }
+.tab-btn:hover:not(.activo) { color: var(--dark-mid); }
 
 /* ═══════════════════════════════════
    VISTAS
@@ -118,9 +118,9 @@ body {
   background:
     linear-gradient(
       135deg,
-      rgba(17, 20, 24, 0.78) 0%,
-      rgba(17, 20, 24, 0.65) 50%,
-      rgba(17, 20, 24, 0.78) 100%
+      rgba(255, 255, 255, 0.88) 0%,
+      rgba(245, 246, 250, 0.80) 50%,
+      rgba(255, 255, 255, 0.88) 100%
     ),
     url('fondo.png') center center / cover no-repeat;
   flex-direction: column;
@@ -137,14 +137,13 @@ body {
 #vista-login .titulo-conductor {
   font-size: 28px;
   font-weight: 800;
-  color: white;
+  color: var(--dark);
   margin-bottom: 6px;
   letter-spacing: -.4px;
-  text-shadow: 0 2px 12px rgba(0,0,0,.5);
 }
 #vista-login .sub-conductor {
   font-size: 13px;
-  color: rgba(255,255,255,.70);
+  color: var(--dark-mid);
 }
 #vista-login .vista-header::after {
   content: '';
@@ -165,16 +164,15 @@ body {
 #vista-login .form-card {
   background: rgba(255,255,255,.97);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,.5);
+  border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 28px;
+  padding: 32px;
   box-shadow: var(--shadow-card);
 }
 
 /* Botón entrar sobre imagen */
 #vista-login .btn-enviar {
   background: var(--bav-red);
-  box-shadow: 0 4px 20px rgba(232,35,26,.45);
   border-radius: 9px;
   margin-top: 12px;
 }
@@ -210,7 +208,7 @@ body {
 .inner {
   max-width: 520px;
   margin: 0 auto;
-  padding: 28px 20px 80px;
+  padding: 32px 24px 80px;
 }
 
 /* ═══════════════════════════════════
@@ -220,7 +218,7 @@ body {
   background: var(--white);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 26px;
+  padding: 30px;
   margin-bottom: 16px;
   box-shadow: var(--shadow-sm);
 }
@@ -333,7 +331,6 @@ body {
   border: none; border-radius: 9px; font-family: 'Inter', sans-serif;
   font-size: 14px; font-weight: 800; letter-spacing: .10em; text-transform: uppercase;
   cursor: pointer; margin-top: 4px;
-  box-shadow: 0 4px 16px rgba(232,35,26,.30);
   transition: background .15s, transform .1s;
 }
 .btn-enviar:hover { background: var(--bav-red-dark); }
@@ -466,7 +463,7 @@ body {
   .topbar-logo-left  { order: 1; }
   .topbar-center     { order: 2; flex: 1; }
   .topbar-logo-right { order: 3; }
-  .tabs { order: 4; width: 100%; padding: 6px 0 2px; border-top: 1px solid rgba(255,255,255,.08); justify-content: flex-start; margin-top: 4px; }
+  .tabs { order: 4; width: 100%; padding: 6px 0 2px; border-top: 1px solid var(--border); justify-content: flex-start; margin-top: 4px; }
   .topbar-marca-text { font-size: 13px; }
   .topbar-marca-sub  { font-size: 7px; }
 
