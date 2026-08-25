@@ -1,19 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap');
 
 :root {
-  --bav-red:      #E8231A;
+  --bav-red:      #D81C14;
   --bav-red-dark: #B81A12;
   --bav-red-bg:   #FEF0EF;
 
-  --ua-green:     #3A9B35;
+  --ua-green:     #2F7D2B;
   --ua-green-dk:  #2A7226;
   --ua-green-bg:  #EAF6EA;
   --ua-yellow:    #F5A800;
+  --ua-yellow-dk: #946006;
   --ua-yellow-bg: #FFF8E6;
 
   --dark:         #111418;
   --dark-mid:     #3D4450;
-  --ink-light:    #6B7280;
+  --ink-light:    #636B79;
   --border:       #D1D9E4;
   --page-bg:      #F5F6FA;
   --white:        #FFFFFF;
@@ -83,7 +84,7 @@ body {
 .marca-ua      { color: var(--ua-green-dk); }
 .topbar-marca-sub {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: .18em;
   text-transform: uppercase;
   color: var(--ink-light);
@@ -164,7 +165,7 @@ body {
 #vista-login .form-card {
   background: rgba(255,255,255,.97);
   backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 14px;
   padding: 32px;
   box-shadow: var(--shadow-card);
@@ -223,7 +224,7 @@ body {
   box-shadow: var(--shadow-sm);
 }
 .form-lbl {
-  font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+  font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
   color: var(--ink-light); font-weight: 700; margin-bottom: 10px; display: block;
 }
 .form-textarea {
@@ -286,7 +287,7 @@ body {
 #chips-tipo .chip-opcion:hover { border-color: var(--bav-red); color: var(--bav-red); }
 #chips-tipo .chip-opcion.sel { background: var(--bav-red); border-color: var(--bav-red); color: white; }
 
-.chip-sub { font-size: 11px; color: var(--ink-light); margin-top: 3px; font-weight: 400; }
+.chip-sub { font-size: 12px; color: var(--ink-light); margin-top: 3px; font-weight: 400; }
 
 #admin-clave-box { margin-top: 16px; }
 .admin-login-input {
@@ -388,11 +389,11 @@ body {
 .rc-3::before { background: var(--ua-yellow); }
 .rc-4::before { background: var(--dark); }
 
-.resumen-lbl { font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-light); font-weight: 700; margin-bottom: 8px; }
+.resumen-lbl { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-light); font-weight: 700; margin-bottom: 8px; }
 .resumen-val { font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .resumen-val.verde   { color: var(--ua-green); }
 .resumen-val.rojo    { color: var(--bav-red); }
-.resumen-val.naranja { color: var(--ua-yellow); }
+.resumen-val.naranja { color: var(--ua-yellow-dk); }
 
 .filtro-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
 .filtro-btn {
@@ -414,19 +415,19 @@ body {
 .reg-card:hover { box-shadow: var(--shadow-md); }
 
 .reg-hora { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; color: var(--dark); font-variant-numeric: tabular-nums; }
-.reg-tipo { font-size: 9px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-light); margin-top: 3px; font-weight: 600; }
+.reg-tipo { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-light); margin-top: 3px; font-weight: 600; }
 .reg-conductor { font-weight: 700; font-size: 12px; }
 .reg-placa {
-  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
   background: var(--bav-red); color: white;
   padding: 3px 9px; border-radius: 3px;
   display: inline-block; margin-top: 5px; letter-spacing: .12em;
 }
 .reg-nota { font-size: 12px; color: var(--dark-mid); }
-.reg-gps { font-size: 10px; color: var(--ink-light); margin-top: 3px; }
+.reg-gps { font-size: 11px; color: var(--ink-light); margin-top: 3px; }
 .reg-gps a { color: var(--s-blue); text-decoration: none; }
 .reg-gps a:hover { text-decoration: underline; }
-.reg-badge { font-size: 9px; font-weight: 700; padding: 4px 10px; text-align: center; letter-spacing: .04em; text-transform: uppercase; border-radius: 4px; }
+.reg-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; text-align: center; letter-spacing: .04em; text-transform: uppercase; border-radius: 4px; }
 .reg-badge.gps     { background: var(--ua-green-bg); color: var(--ua-green-dk); }
 .reg-badge.sin-gps { background: var(--s-amber-bg);  color: var(--s-amber); }
 
@@ -448,7 +449,7 @@ body {
 }
 .btn-refrescar:hover { background: var(--ua-green-bg); }
 
-.estado-conexion { font-size: 10px; color: var(--ink-light); display: flex; align-items: center; gap: 5px; font-weight: 500; }
+.estado-conexion { font-size: 11px; color: var(--ink-light); display: flex; align-items: center; gap: 5px; font-weight: 500; }
 .dot-conexion { width: 7px; height: 7px; border-radius: 50%; background: var(--ua-green); box-shadow: 0 0 0 2px var(--ua-green-bg); }
 
 /* ═══════════════════════════════════
@@ -464,7 +465,7 @@ body {
   .topbar-logo-right { order: 3; }
   .tabs { order: 4; width: 100%; padding: 6px 0 2px; border-top: 1px solid var(--border); justify-content: flex-start; margin-top: 4px; }
   .topbar-marca-text { font-size: 13px; }
-  .topbar-marca-sub  { font-size: 7px; }
+  .topbar-marca-sub  { font-size: 11px; }
 
   #vista-login { padding: 28px 16px 50px; justify-content: flex-start; padding-top: 36px; }
   #vista-login .titulo-conductor { font-size: 22px; }
