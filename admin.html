@@ -1489,6 +1489,9 @@ function agregarConductor() {
   if (CONDUCTORES_FIJOS.some(c => c.nombre === nombre)) {
     errEl.textContent = 'Ya existe un conductor con ese nombre.'; return;
   }
+  if (CONDUCTORES_FIJOS.some(c => c.placa === placa)) {
+    errEl.textContent = 'Ya existe un conductor con esa placa.'; return;
+  }
 
   errEl.textContent = '';
   CONDUCTORES_FIJOS.push({ nombre, placa });
