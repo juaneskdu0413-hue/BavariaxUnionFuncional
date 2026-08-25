@@ -95,6 +95,15 @@ function obtenerConductoresGuardados() {
   return CONDUCTORES_DEFAULT.slice();
 }
 
+// Oculta todos los dígitos de la cédula menos los últimos 4, ej. "1015422543"
+// → "••••••2543". Es solo enmascaramiento visual; el dato completo (c.cedula)
+// nunca se toca ni se deja de enviar donde ya se estuviera usando.
+function enmascararCedula(cedula) {
+  const str = String(cedula);
+  if (str.length <= 4) return str;
+  return '•'.repeat(str.length - 4) + str.slice(-4);
+}
+
 // Dibuja un chip de conductor con el mismo marcado que usaban los chips fijos
 // (data-rol, data-val, data-placa, chip-sub). Si el conductor no tiene cédula
 // registrada (ej. uno agregado desde el panel de admin, que no la pide), el
@@ -109,7 +118,7 @@ function crearChipConductor(c) {
   const nombreTxt = document.createTextNode(c.nombre);
   const sub = document.createElement('div');
   sub.className = 'chip-sub';
-  sub.textContent = c.cedula ? `CC ${c.cedula} · Placa ${c.placa}` : `Placa ${c.placa}`;
+  sub.textContent = c.cedula ? `CC ${enmascararCedula(c.cedula)} · Placa ${c.placa}` : `Placa ${c.placa}`;
 
   div.appendChild(nombreTxt);
   div.appendChild(sub);
