@@ -16,11 +16,14 @@ const SESION_ADMIN_KEY = 'bxua_sesion';
 // Misma lista de usuarios autorizados que admin.html. "admin" tiene acceso
 // completo al panel; "cliente" es de solo lectura (ver aplicarRestriccionesPorRol
 // en admin.html).
+// Las contraseñas están en Base64 (no es cifrado, solo evita que queden
+// legibles a simple vista en el código fuente); se decodifican con atob()
+// al validar el login.
 const USUARIOS_ADMIN = [
-  { usuario: 'juaneskdu', clave: 'Juancho043', rol: 'admin' },
-  { usuario: 'NelsonC',   clave: 'Nelson043',  rol: 'admin' },
-  { usuario: 'UnionA',    clave: 'UnionXB',    rol: 'cliente' },
-  { usuario: 'andresfp',  clave: 'andres123',  rol: 'admin' },
+  { usuario: 'juaneskdu', clave: 'SnVhbmNobzA0Mw==', rol: 'admin' },
+  { usuario: 'NelsonC',   clave: 'TmVsc29uMDQz',     rol: 'admin' },
+  { usuario: 'UnionA',    clave: 'VW5pb25YQg==',     rol: 'cliente' },
+  { usuario: 'andresfp',  clave: 'YW5kcmVzMTIz',     rol: 'admin' },
 ];
 
 // Misma clave que usa admin.html (pestaña "Conductores") para guardar la lista
@@ -153,7 +156,7 @@ function inicializarLogin() {
       const usuario = document.getElementById('admin-usuario').value.trim();
       const clave = document.getElementById('admin-clave').value;
       const err = document.getElementById('login-err');
-      const encontrado = USUARIOS_ADMIN.find(u => u.usuario === usuario && u.clave === clave);
+      const encontrado = USUARIOS_ADMIN.find(u => u.usuario === usuario && atob(u.clave) === clave);
 
       if (!encontrado) {
         err.textContent = 'Usuario o contraseña incorrectos';
