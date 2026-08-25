@@ -15,3 +15,5 @@ desktop.ini
 
 # Configuración local de herramientas (no forma parte del proyecto)
 .claude/settings.local.json
+.claude/skills/
+.impeccable/
