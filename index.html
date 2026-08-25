@@ -65,9 +65,9 @@
       </div><!-- /chips-identidad -->
 
       <div id="admin-clave-box" style="display:none;margin-top:16px;">
-        <label class="form-lbl">Usuario</label>
+        <label class="form-lbl" for="admin-usuario">Usuario</label>
         <input type="text" class="admin-login-input" id="admin-usuario" placeholder="Usuario" autocomplete="username">
-        <label class="form-lbl" style="margin-top:14px;">Contraseña</label>
+        <label class="form-lbl" for="admin-clave" style="margin-top:14px;">Contraseña</label>
         <input type="password" class="admin-login-input" id="admin-clave" placeholder="Contraseña" autocomplete="current-password">
         <div class="gps-err" id="login-err" style="display:none;"></div>
       </div>
@@ -112,12 +112,12 @@
         <button class="gps-btn" id="btn-gps">Capturar ubicación</button>
       </div>
 
-      <label class="form-lbl">Nota / lugar (obligatorio)</label>
+      <label class="form-lbl" for="nota">Nota / lugar (obligatorio)</label>
       <textarea class="form-textarea" id="nota"
         placeholder="Ej: Llegada a puerto, contenedor MSNU2867900 — Cartagena"></textarea>
 
       <div id="novedad-box" style="display:none;margin-top:18px;">
-        <label class="form-lbl" id="novedad-label">Novedad del día (opcional)</label>
+        <label class="form-lbl" id="novedad-label" for="novedad">Novedad del día (opcional)</label>
         <textarea class="form-textarea" id="novedad"
           placeholder="Ej: llanta pinchada, cliente no estaba, tráfico en vía Sibaté..."></textarea>
       </div>

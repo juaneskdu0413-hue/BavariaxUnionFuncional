@@ -943,10 +943,10 @@ body {
     <div class="login-admin-sub">Ingresa tus credenciales de coordinación</div>
 
     <form id="login-admin-form">
-      <label class="login-admin-lbl">Usuario</label>
+      <label class="login-admin-lbl" for="login-usuario">Usuario</label>
       <input type="text" class="login-admin-input" id="login-usuario" autocomplete="username" required>
 
-      <label class="login-admin-lbl">Contraseña</label>
+      <label class="login-admin-lbl" for="login-clave">Contraseña</label>
       <input type="password" class="login-admin-input" id="login-clave" autocomplete="current-password" required>
 
       <div class="login-admin-err" id="login-admin-err"></div>
@@ -1067,10 +1067,10 @@ body {
         <button class="hist-quick"        id="h-quick-ayer"   onclick="aplicarQuickFecha('ayer')">Ayer</button>
         <button class="hist-quick"        id="h-quick-semana" onclick="aplicarQuickFecha('semana')">7 días</button>
         <button class="hist-quick"        id="h-quick-todo"   onclick="aplicarQuickFecha('todo')">Todo</button>
-        <input type="date" class="hist-date-input" id="h-fecha-desde"
+        <input type="date" class="hist-date-input" id="h-fecha-desde" aria-label="Fecha desde"
                onchange="hFiltros.fechaDesde=this.value; quitarQuickActivo(); renderHistorial();">
         <span class="hist-sep">→</span>
-        <input type="date" class="hist-date-input" id="h-fecha-hasta"
+        <input type="date" class="hist-date-input" id="h-fecha-hasta" aria-label="Fecha hasta"
                onchange="hFiltros.fechaHasta=this.value; quitarQuickActivo(); renderHistorial();">
         <button class="hist-orden-btn" id="h-orden-btn" onclick="toggleOrden()">↓ Más reciente</button>
       </div>
@@ -1136,10 +1136,10 @@ body {
       <div class="inf-grupo">
         <div class="inf-label">Rango personalizado</div>
         <div class="inf-fechas">
-          <input type="date" class="inf-date-input" id="x-desde"
+          <input type="date" class="inf-date-input" id="x-desde" aria-label="Fecha desde"
                  onchange="xFiltros.desde=this.value; excelQuitarQuick(); actualizarPreviewExcel(); renderCharts();">
           <span class="inf-sep">→</span>
-          <input type="date" class="inf-date-input" id="x-hasta"
+          <input type="date" class="inf-date-input" id="x-hasta" aria-label="Fecha hasta"
                  onchange="xFiltros.hasta=this.value; excelQuitarQuick(); actualizarPreviewExcel(); renderCharts();">
         </div>
       </div>
@@ -1181,10 +1181,10 @@ body {
       <div class="cond-form-title">Agregar conductor</div>
       <div class="cond-form-row">
         <input  type="text" class="cond-input" id="cond-nombre"
-                placeholder="Nombre completo (ej: JUAN PÉREZ GÓMEZ)"
+                placeholder="Nombre completo (ej: JUAN PÉREZ GÓMEZ)" aria-label="Nombre completo"
                 oninput="this.value=this.value.toUpperCase()">
         <input  type="text" class="cond-input cond-input-placa" id="cond-placa"
-                placeholder="Placa" maxlength="7"
+                placeholder="Placa" aria-label="Placa" maxlength="7"
                 oninput="this.value=this.value.toUpperCase()">
         <button class="btn-agregar" onclick="agregarConductor()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
