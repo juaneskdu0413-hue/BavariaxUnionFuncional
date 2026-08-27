@@ -39,7 +39,7 @@ const CONDUCTORES_DEFAULT = [
   { nombre: 'OSCAR ANDRÉS VÁSQUEZ',          cedula: '1015422543', placa: 'JVK031' },
   { nombre: 'FREDY SANTANA ACUÑA',           cedula: '1024483571', placa: 'JVK594' },
   { nombre: 'JOSE EDGARDO HERNANDEZ CRUZ',   cedula: '79750999',   placa: 'JVK129' },
-  { nombre: 'WALTER YESID PACHON RODRIGUEZ', cedula: '1104698940', placa: 'JVK130' },
+  { nombre: 'YESID GUERRERO SERNA',          cedula: '1051589874', placa: 'JVK130' },
 ];
 
 // ════════════════════════════════════════════════════════
