@@ -16,15 +16,31 @@ const SESION_ADMIN_KEY = 'bxua_sesion';
 // Misma lista de usuarios autorizados que admin.html. "admin" tiene acceso
 // completo al panel; "cliente" es de solo lectura (ver aplicarRestriccionesPorRol
 // en admin.html).
-// Las contraseñas están en Base64 (no es cifrado, solo evita que queden
-// legibles a simple vista en el código fuente); se decodifican con atob()
-// al validar el login.
+// Las contraseñas se guardan como hash SHA-256 (Web Crypto API nativa, ver
+// sha256Hex() más abajo) — nunca se compara ni se guarda texto plano ni Base64.
+// IMPORTANTE: esto sigue siendo validación 100% client-side. Un hash no
+// reversible evita que alguien lea la contraseña con solo ver el código
+// fuente, pero NO impide que alguien con la consola del navegador escriba
+// directamente en localStorage una sesión falsa y se salte el login por
+// completo. Cerrar esa brecha requiere mover la validación al backend
+// (Apps Script) — ver apps-script/ para el diseño de ese fix.
 const USUARIOS_ADMIN = [
-  { usuario: 'juaneskdu', clave: 'SnVhbmNobzA0Mw==', rol: 'admin' },
-  { usuario: 'NelsonC',   clave: 'TmVsc29uMDQz',     rol: 'admin' },
-  { usuario: 'UnionA',    clave: 'VW5pb25YQg==',     rol: 'cliente' },
-  { usuario: 'andresfp',  clave: 'YW5kcmVzMTIz',     rol: 'admin' },
+  { usuario: 'juaneskdu', claveHash: 'de355d443082c1608e3e565aac0a9c85d4dcb2b9ab2585fdae7698e8daae27fe', rol: 'admin' },
+  { usuario: 'NelsonC',   claveHash: 'ff1873b60679c72b83aca49cba82fd4c43a5ae1739d508595a99dccaff6c981e', rol: 'admin' },
+  { usuario: 'UnionA',    claveHash: '43f1428eb864a5959f86d7ee0e7cca32ed45352f89b8e2f7903edf29c7371e60', rol: 'cliente' },
+  { usuario: 'andresfp',  claveHash: 'f6af6e4d6c9315f6a693f27a4868f405edf15d97cbf661d8ac29071b2b6b5961', rol: 'admin' },
 ];
+
+// Calcula el hash SHA-256 de un texto usando la Web Crypto API nativa del
+// navegador (sin librerías externas) y lo devuelve como string hexadecimal
+// en minúsculas — mismo formato que los valores guardados en claveHash arriba.
+async function sha256Hex(texto) {
+  const bytes = new TextEncoder().encode(texto);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 // Misma clave que usa admin.html (pestaña "Conductores") para guardar la lista
 // de conductores activos. Si el panel de admin agrega/elimina conductores,
@@ -158,14 +174,15 @@ function inicializarLogin() {
     });
   });
 
-  document.getElementById('btn-login').addEventListener('click', () => {
+  document.getElementById('btn-login').addEventListener('click', async () => {
     if (!rolElegido) { alert('Selecciona quién eres.'); return; }
 
     if (rolElegido === 'admin') {
       const usuario = document.getElementById('admin-usuario').value.trim();
       const clave = document.getElementById('admin-clave').value;
       const err = document.getElementById('login-err');
-      const encontrado = USUARIOS_ADMIN.find(u => u.usuario === usuario && atob(u.clave) === clave);
+      const claveHash = await sha256Hex(clave);
+      const encontrado = USUARIOS_ADMIN.find(u => u.usuario === usuario && u.claveHash === claveHash);
 
       if (!encontrado) {
         err.textContent = 'Usuario o contraseña incorrectos';
