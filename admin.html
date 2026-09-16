@@ -1277,26 +1277,19 @@ body {
 // ══════════════════════════════════════════
 // admin.html es una página independiente y ahora es dueña de su propio
 // login: ya no depende de index.html ni de la clave única anterior.
-// La sesión se guarda en localStorage (no sessionStorage) para que no
-// se pierda al cerrar y volver a abrir el navegador.
+// La sesión (incluyendo el token firmado) se guarda en sessionStorage, no
+// en localStorage: se pierde al cerrar el navegador/pestaña a propósito,
+// para no dejar una sesión abierta indefinidamente en un equipo compartido.
 const SESION_ADMIN_KEY = 'bxua_sesion';
 
 // "admin": acceso completo. "cliente": panel de solo lectura (sin gestión
 // de conductores ni cierre manual de alertas) — ver aplicarRestriccionesPorRol().
-// Las contraseñas se guardan como hash SHA-256 (Web Crypto API nativa, ver
-// sha256Hex() más abajo) — nunca se compara ni se guarda texto plano ni Base64.
-// IMPORTANTE: esto sigue siendo validación 100% client-side. Un hash no
-// reversible evita que alguien lea la contraseña con solo ver el código
-// fuente, pero NO impide que alguien con la consola del navegador escriba
-// directamente en localStorage una sesión falsa y se salte el login por
-// completo. Cerrar esa brecha requiere mover la validación al backend
-// (Apps Script) — ver apps-script/ para el diseño de ese fix.
-const USUARIOS_ADMIN = [
-  { usuario: 'juaneskdu', claveHash: 'de355d443082c1608e3e565aac0a9c85d4dcb2b9ab2585fdae7698e8daae27fe', rol: 'admin' },
-  { usuario: 'NelsonC',   claveHash: 'ff1873b60679c72b83aca49cba82fd4c43a5ae1739d508595a99dccaff6c981e', rol: 'admin' },
-  { usuario: 'UnionA',    claveHash: '43f1428eb864a5959f86d7ee0e7cca32ed45352f89b8e2f7903edf29c7371e60', rol: 'cliente' },
-  { usuario: 'andresfp',  claveHash: 'f6af6e4d6c9315f6a693f27a4868f405edf15d97cbf661d8ac29071b2b6b5961', rol: 'admin' },
-];
+// Las credenciales reales YA NO viven aquí ni en ningún archivo del cliente:
+// se validan en Apps Script (apps-script/AuthServidor.gs, PropertiesService)
+// vía intentarLoginAdmin(), que llama a doPost con action:'login'. Este
+// archivo solo calcula el hash SHA-256 de la contraseña escrita (para no
+// mandar texto plano por la red) y envía ese hash al servidor — nunca
+// compara nada localmente ni guarda una lista de usuarios/contraseñas.
 const ROLES_PERMITIDOS = ['admin', 'cliente'];
 
 // Calcula el hash SHA-256 de un texto usando la Web Crypto API nativa del
@@ -1314,14 +1307,29 @@ async function sha256Hex(texto) {
 // partes del panel se ocultan para el rol 'cliente'.
 let rolActual = null;
 
-// ¿Hay una sesión válida guardada (admin o cliente)?
+// ¿Hay una sesión válida guardada (admin o cliente)? Ya no basta con que
+// exista un objeto con "rol" válido en el storage — eso era exactamente
+// lo que permitía falsificar una sesión desde la consola del navegador.
+// Ahora también se exige que traiga un token, y ese token se valida de
+// verdad contra el servidor la primera vez que se usa (en cargar()) — si
+// el servidor lo rechaza (falso, alterado o expirado), se fuerza el login.
 function protegerAcceso() {
   try {
-    const raw = localStorage.getItem(SESION_ADMIN_KEY);
+    const raw = sessionStorage.getItem(SESION_ADMIN_KEY);
     const datos = raw ? JSON.parse(raw) : null;
-    return !!(datos && ROLES_PERMITIDOS.includes(datos.rol));
+    return !!(datos && datos.token && ROLES_PERMITIDOS.includes(datos.rol));
   } catch (e) {
     return false;
+  }
+}
+
+// Token de la sesión actual, o null si no hay sesión guardada.
+function obtenerTokenSesion_() {
+  try {
+    const datos = JSON.parse(sessionStorage.getItem(SESION_ADMIN_KEY));
+    return (datos && datos.token) || null;
+  } catch (e) {
+    return null;
   }
 }
 
@@ -1345,7 +1353,7 @@ function mostrarPanelAdmin() {
   document.getElementById('panel-admin').style.display = '';
 
   try {
-    const datos = JSON.parse(localStorage.getItem(SESION_ADMIN_KEY));
+    const datos = JSON.parse(sessionStorage.getItem(SESION_ADMIN_KEY));
     rolActual = (datos && datos.rol) || 'admin';
   } catch (e) {
     rolActual = 'admin';
@@ -1357,27 +1365,44 @@ function mostrarPanelAdmin() {
   cargar().then(() => initHistorial());
 }
 
-// Valida usuario/contraseña contra USUARIOS_ADMIN; si es correcto, guarda la sesión y entra
+// Valida usuario/contraseña llamando a Apps Script (action:'login'), que
+// compara contra PropertiesService en el servidor — nunca localmente.
+// El navegador nunca ve ni compara la contraseña real: solo calcula su
+// hash SHA-256 y manda ese hash; si coincide, el servidor devuelve un
+// token firmado (HMAC-SHA256) que de aquí en adelante prueba la sesión
+// en cada llamada a doGet, sin que el navegador pueda falsificarlo.
 async function intentarLoginAdmin(usuario, clave) {
   const err = document.getElementById('login-admin-err');
   const claveHash = await sha256Hex(clave);
-  const encontrado = USUARIOS_ADMIN.find(u => u.usuario === usuario && u.claveHash === claveHash);
 
-  if (!encontrado) {
-    err.textContent = 'Usuario o contraseña incorrectos';
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'login', usuario: usuario, claveHash: claveHash }),
+    });
+    const resultado = await res.json();
+
+    if (!resultado || !resultado.ok) {
+      err.textContent = (resultado && resultado.error) || 'Usuario o contraseña incorrectos';
+      err.classList.add('vis');
+      return;
+    }
+
+    err.classList.remove('vis');
+    sessionStorage.setItem(SESION_ADMIN_KEY, JSON.stringify({
+      rol: resultado.rol, usuario: resultado.usuario, token: resultado.token,
+    }));
+    mostrarPanelAdmin();
+  } catch (e) {
+    err.textContent = 'No se pudo conectar con el servidor. Verifica tu conexión e intenta de nuevo.';
     err.classList.add('vis');
-    return;
   }
-
-  err.classList.remove('vis');
-  localStorage.setItem(SESION_ADMIN_KEY, JSON.stringify({ rol: encontrado.rol, usuario: encontrado.usuario }));
-  mostrarPanelAdmin();
 }
 
 // Botón "Cerrar sesión" del header: borra la sesión y redirige a index.html
 // (no muestra el formulario de login propio de admin.html).
 function cerrarSesionAdmin() {
-  localStorage.removeItem(SESION_ADMIN_KEY);
+  sessionStorage.removeItem(SESION_ADMIN_KEY);
   window.location.href = 'index.html';
 }
 
@@ -1567,9 +1592,23 @@ async function cargar() {
     `<div class="estado-carga"><div class="spinner"></div>Cargando registros...</div>`;
   document.getElementById('filtros-row').innerHTML = '';
 
+  const token = obtenerTokenSesion_();
+  if (!token) { mostrarLoginAdmin(); return; }
+
   try {
-    const res = await fetch(APPS_SCRIPT_URL);
-    todosRegistros = await res.json();
+    const res = await fetch(APPS_SCRIPT_URL + '?token=' + encodeURIComponent(token));
+    const data = await res.json();
+
+    // El servidor responde { error: '...' } cuando el token es inválido,
+    // fue alterado, o ya expiró (12h) — en ese caso no es un error de red,
+    // es que la sesión ya no sirve: se limpia y se vuelve a pedir login.
+    if (data && data.error) {
+      sessionStorage.removeItem(SESION_ADMIN_KEY);
+      mostrarLoginAdmin();
+      return;
+    }
+
+    todosRegistros = data;
     if (!Array.isArray(todosRegistros)) throw new Error('Formato inesperado');
     renderSemaforo();
     renderFiltros();
