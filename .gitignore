@@ -17,3 +17,10 @@ desktop.ini
 .claude/settings.local.json
 .claude/skills/
 .impeccable/
+
+# clasp (Google Apps Script) — contiene el Script ID del proyecto real,
+# no debe quedar público en el repo. Cada máquina que sincronice con
+# Apps Script debe generar el suyo (ver apps-script/README o instrucciones
+# de sincronización con clasp).
+.clasp.json
+.clasprc.json
