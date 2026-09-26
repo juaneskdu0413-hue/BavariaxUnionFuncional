@@ -380,3 +380,157 @@ function probarConfiguracion() {
   if (CONFIG.WHATSAPP_ACTIVO) enviarWhatsAppAlerta_(datosFalsos);
   Logger.log('Prueba enviada. Revisa tu correo' + (CONFIG.WHATSAPP_ACTIVO ? ' y WhatsApp' : '') + '.');
 }
+
+/**
+ * ════════════════════════════════════════════════════════
+ * CHECK-INS PENDIENTES A LAS 10:00 AM
+ * ════════════════════════════════════════════════════════
+ * Este bloque es ADITIVO igual que el resto del archivo: reutiliza
+ * CONFIG, obtenerHojaRegistros_(), leerRegistrosDeHoy_() y
+ * formatearFecha_() ya definidos arriba — no duplica nada.
+ *
+ * Qué hace:
+ *  1) Lee la pestaña "CONDUCTORES" (nombre | placa | activo) y se queda
+ *     solo con los que tienen activo = "SI".
+ *  2) Lee los registros de HOY de la pestaña de Registros.
+ *  3) Por cada conductor activo, revisa si ya tiene un "Inicio jornada"
+ *     hoy. Si a las 10:00 AM alguno no lo tiene, se reporta.
+ *  4) Si hay faltantes, envía UN solo correo con la lista completa.
+ *     Si todos ya hicieron check-in, no envía nada.
+ */
+
+// ── PUNTO DE ENTRADA — esta es la función que corre el trigger de las 10 AM ──
+function revisarCheckinsPendientes() {
+  const conductoresActivos = obtenerConductoresActivos_();
+  if (conductoresActivos === null) return; // error ya logueado en obtenerConductoresActivos_
+
+  if (conductoresActivos.length === 0) {
+    Logger.log('revisarCheckinsPendientes: no hay conductores activos (activo = "SI") en la pestaña "CONDUCTORES".');
+    return;
+  }
+
+  const hojaRegistros = obtenerHojaRegistros_();
+  const registrosHoy = leerRegistrosDeHoy_(hojaRegistros);
+
+  const conInicioJornada = new Set();
+  registrosHoy.forEach(function (r) {
+    if (r.tipo === 'Inicio jornada') conInicioJornada.add(r.conductor.trim().toLowerCase());
+  });
+
+  const faltantes = conductoresActivos.filter(function (c) {
+    return !conInicioJornada.has(c.nombre.trim().toLowerCase());
+  });
+
+  if (faltantes.length === 0) {
+    Logger.log('Todos los conductores han registrado inicio de jornada');
+    return;
+  }
+
+  enviarEmailCheckinsPendientes_(faltantes);
+  Logger.log('revisarCheckinsPendientes: ' + faltantes.length + ' conductor(es) sin check-in, email enviado.');
+}
+
+// ── LECTURA DE "CONDUCTORES" — devuelve solo los activos (activo = "SI") ──
+// Devuelve null si la pestaña no existe o le faltan columnas obligatorias
+// (error ya logueado en ese caso, para que revisarCheckinsPendientes() no
+// falle silenciosamente). Devuelve [] si la pestaña existe pero no tiene
+// filas de datos.
+function obtenerConductoresActivos_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hoja = ss.getSheetByName('CONDUCTORES');
+  if (!hoja) {
+    Logger.log(
+      'ERROR revisarCheckinsPendientes: no se encontró la pestaña "CONDUCTORES". ' +
+      'Pestañas disponibles: ' + ss.getSheets().map(function (s) { return s.getName(); }).join(', ')
+    );
+    return null;
+  }
+
+  const valores = hoja.getDataRange().getValues();
+  if (valores.length < 2) {
+    Logger.log('ERROR revisarCheckinsPendientes: la pestaña "CONDUCTORES" no tiene filas de datos (solo encabezado o vacía).');
+    return [];
+  }
+
+  const encabezados = valores[0].map(function (h) { return String(h).trim().toLowerCase(); });
+  const idx = {
+    nombre: encabezados.indexOf('nombre'),
+    placa: encabezados.indexOf('placa'),
+    activo: encabezados.indexOf('activo'),
+  };
+
+  const columnasFaltantes = Object.keys(idx).filter(function (k) { return idx[k] === -1; });
+  if (columnasFaltantes.length) {
+    Logger.log(
+      'ERROR revisarCheckinsPendientes: faltan columnas obligatorias en "CONDUCTORES": ' + columnasFaltantes.join(', ') +
+      '. Encabezados encontrados: ' + encabezados.join(', ')
+    );
+    return null;
+  }
+
+  const filas = valores.slice(1);
+  const conductores = [];
+
+  filas.forEach(function (fila) {
+    const nombre = fila[idx.nombre];
+    if (!nombre) return; // fila vacía, se ignora
+
+    const activo = String(fila[idx.activo]).trim().toUpperCase();
+    if (activo !== 'SI') return;
+
+    conductores.push({
+      nombre: String(nombre).trim(),
+      placa: idx.placa > -1 ? String(fila[idx.placa]).trim() : '',
+    });
+  });
+
+  return conductores;
+}
+
+// ── ENVÍO DEL CORREO CON LA LISTA DE FALTANTES ──
+function enviarEmailCheckinsPendientes_(faltantes) {
+  const hoyTxt = formatearFecha_(new Date());
+  const asunto = '⚠️ Sin check-in a las 10:00 AM — ' + hoyTxt;
+
+  const listaTxt = faltantes.map(function (c) {
+    return '- ' + c.nombre + (c.placa ? ' (' + c.placa + ')' : '');
+  }).join('\n');
+
+  const cuerpo =
+    'Alerta automática — BavariaxUnionAndina\n\n' +
+    'Los siguientes conductores activos NO han registrado "Inicio jornada" hoy (' + hoyTxt + '):\n\n' +
+    listaTxt + '\n\n' +
+    'Verifica en el panel de administración o contacta a cada conductor.\n' +
+    '(Este correo se generó automáticamente desde Apps Script, revisión de las 10:00 AM.)';
+
+  MailApp.sendEmail(CONFIG.EMAIL_DESTINO, asunto, cuerpo);
+}
+
+// ════════════════════════════════════════════════════════
+// CONFIGURACIÓN DEL TRIGGER DE LAS 10:00 AM — ejecutar UNA SOLA VEZ
+// ════════════════════════════════════════════════════════
+// Corre esta función una vez desde el editor (▶ Ejecutar, con
+// "configurarTriggerCheckin" seleccionado en el desplegable de funciones).
+// Elimina cualquier trigger anterior de revisarCheckinsPendientes para
+// evitar duplicados si la ejecutas más de una vez.
+//
+// Nota: Apps Script no garantiza el minuto exacto en triggers diarios por
+// hora — atHour(10) dispara en algún punto dentro de la ventana 10:00–11:00,
+// no exactamente a las 10:00:00.
+function configurarTriggerCheckin() {
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(function (t) {
+    if (t.getHandlerFunction() === 'revisarCheckinsPendientes') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+
+  ScriptApp.newTrigger('revisarCheckinsPendientes')
+    .timeBased()
+    .atHour(10)
+    .everyDays(1)
+    .inTimezone(CONFIG.ZONA_HORARIA)
+    .create();
+
+  Logger.log('Trigger creado: revisarCheckinsPendientes correrá todos los días entre 10:00 y 11:00 AM (' + CONFIG.ZONA_HORARIA + ').');
+}
