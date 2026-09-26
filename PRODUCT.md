@@ -33,7 +33,7 @@ No es una plataforma de logística/flotas de mercado (tipo TMS); es una herramie
 - **Google Sheets vía Google Apps Script es el backend permanente** (no un paso intermedio hacia otra base de datos) — todo registro (`guardarRegistro`) y lectura (`obtenerRegistros`) pasa por `APPS_SCRIPT_URL`; el diseño y cualquier feature nueva debe asumir esta limitación (sin transacciones, sin backend propio, borrado de registros centralizados debe hacerse directo en la hoja).
 - Tipos de evento actuales: Inicio jornada, Llegada a parada, Salida de parada, Fin jornada, Entrada taller, Salida taller — cada uno con nota obligatoria de lugar y, en taller, un campo "Novedad / motivo" (obligatorio en Entrada taller, opcional en Salida taller y en jornada).
 - Roles: `conductor` (solo `index.html`, sin acceso a panel), `admin` (acceso completo a `admin.html`), `cliente` (acceso limitado/solo lectura al mismo panel).
-- Roster de conductores y usuarios admin están hardcodeados como listas de respaldo en `Logica.js`/`admin.html`/`resumen.html`; cambios de placa, alta/baja de conductor o nuevo usuario admin se hacen editando esas listas (o desde el panel, que persiste en `localStorage` del navegador del admin).
+- Roster de conductores y usuarios admin están hardcodeados como listas de respaldo en `Logica.js`/`admin.html`; cambios de placa, alta/baja de conductor o nuevo usuario admin se hacen editando esas listas (o desde el panel, que persiste en `localStorage` del navegador del admin).
 - Todo el texto de la interfaz está en español.
 
 ## Brand Commitments
