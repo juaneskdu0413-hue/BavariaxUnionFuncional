@@ -399,6 +399,13 @@ function probarConfiguracion() {
  *     Si todos ya hicieron check-in, no envía nada.
  */
 
+var REGEX_MARCAS_DIACRITICAS_ = new RegExp('[' + String.fromCharCode(0x300) + '-' + String.fromCharCode(0x36f) + ']', 'g');
+
+function normalizarNombre_(nombre) {
+  return String(nombre).trim().toLowerCase()
+    .normalize('NFD').replace(REGEX_MARCAS_DIACRITICAS_, '');
+}
+
 // ── PUNTO DE ENTRADA — esta es la función que corre el trigger de las 10 AM ──
 function revisarCheckinsPendientes() {
   const conductoresActivos = obtenerConductoresActivos_();
@@ -414,11 +421,11 @@ function revisarCheckinsPendientes() {
 
   const conInicioJornada = new Set();
   registrosHoy.forEach(function (r) {
-    if (r.tipo === 'Inicio jornada') conInicioJornada.add(r.conductor.trim().toLowerCase());
+    if (r.tipo === 'Inicio jornada') conInicioJornada.add(normalizarNombre_(r.conductor));
   });
 
   const faltantes = conductoresActivos.filter(function (c) {
-    return !conInicioJornada.has(c.nombre.trim().toLowerCase());
+    return !conInicioJornada.has(normalizarNombre_(c.nombre));
   });
 
   if (faltantes.length === 0) {
