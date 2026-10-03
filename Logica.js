@@ -41,9 +41,9 @@ const CONDUCTORES_KEY = 'bxua_conductores';
 // Lista de respaldo: se usa solo si no hay nada guardado todavía en localStorage
 // (primera carga, o navegador/dispositivo distinto al que usó el admin).
 const CONDUCTORES_DEFAULT = [
-  { nombre: 'CARLOS MARIO GÁMEZ',            cedula: '1003376142', placa: 'JVK595' },
+  { nombre: 'OSCAR ANDRÉS VÁSQUEZ',          cedula: '1015422543', placa: 'JVK595' },
   { nombre: 'DEIBIS RAFAEL PADILLA',         cedula: '8498966',    placa: 'JVK142' },
-  { nombre: 'OSCAR ANDRÉS VÁSQUEZ',          cedula: '1015422543', placa: 'JVK031' },
+  { nombre: 'GUSTAVO NIÑO',                  cedula: '1014184984', placa: 'JVK031' },
   { nombre: 'OSCAR STIVEN OCHOA PEDREROS',   cedula: '1022443892', placa: 'JVK594' },
   { nombre: 'JOSE EDGARDO HERNANDEZ CRUZ',   cedula: '79750999',   placa: 'JVK129' },
   { nombre: 'YESID GUERRERO SERNA',          cedula: '1051589874', placa: 'JVK130' },
