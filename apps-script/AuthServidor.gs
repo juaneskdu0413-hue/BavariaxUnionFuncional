@@ -49,6 +49,14 @@ const AUTH_CONFIG = {
 // que ya están en Logica.js/admin.html (SHA-256 de las contraseñas reales)
 // — así no tienes que inventar contraseñas nuevas, solo mover dónde vive
 // la verificación.
+//
+// ⚠️ A diferencia del secreto HMAC (que si ya existe no se toca), la
+// lista de usuarios de abajo SÍ se sobrescribe por completo cada vez que
+// esta función corre, sin preguntar. NO la vuelvas a ejecutar para
+// agregar/cambiar un solo usuario — eso resetea a todos los demás a lo
+// que diga este archivo, que puede estar desactualizado respecto a lo
+// que de verdad hay en Script Properties. Para cambios puntuales usa
+// reemplazarUsuario_() más abajo.
 function configurarCredencialesAuth() {
   const props = PropertiesService.getScriptProperties();
 
@@ -67,12 +75,43 @@ function configurarCredencialesAuth() {
   const usuarios = [
     { usuario: 'juaneskdu', claveHash: 'de355d443082c1608e3e565aac0a9c85d4dcb2b9ab2585fdae7698e8daae27fe', rol: 'admin' },
     { usuario: 'NelsonC',   claveHash: 'ff1873b60679c72b83aca49cba82fd4c43a5ae1739d508595a99dccaff6c981e', rol: 'admin' },
-    { usuario: 'UnionA',    claveHash: '43f1428eb864a5959f86d7ee0e7cca32ed45352f89b8e2f7903edf29c7371e60', rol: 'cliente' },
+    { usuario: 'MariaR',    claveHash: 'a552c4e4bbc62c80c8e8626da66314184270fd1d840af10c50041c431d97aefa', rol: 'cliente' },
     { usuario: 'andresfp',  claveHash: 'f6af6e4d6c9315f6a693f27a4868f405edf15d97cbf661d8ac29071b2b6b5961', rol: 'admin' },
   ];
   props.setProperty(AUTH_CONFIG.PROPIEDAD_USUARIOS, JSON.stringify(usuarios));
   Logger.log('Credenciales guardadas en Script Properties (' + usuarios.length + ' usuarios).');
   Logger.log('IMPORTANTE: después de correr esto, USUARIOS_ADMIN puede borrarse por completo de Logica.js y admin.html — ya no necesita vivir en el cliente.');
+}
+
+// ════════════════════════════════════════════════════════
+// REEMPLAZAR UN SOLO USUARIO — seguro para producción
+// ════════════════════════════════════════════════════════
+// A diferencia de configurarCredencialesAuth() (que pisa TODA la lista),
+// esta función lee la lista tal como está HOY en Script Properties,
+// reemplaza solo la fila indicada por usuarioViejo, y conserva el rol que
+// ese usuario ya tenía. Cualquier otro usuario que exista en producción
+// (aunque no coincida con lo que dice este archivo) queda intacto.
+function reemplazarUsuario_(usuarioViejo, usuarioNuevo, claveHashNueva) {
+  const props = PropertiesService.getScriptProperties();
+  const usuarios = JSON.parse(props.getProperty(AUTH_CONFIG.PROPIEDAD_USUARIOS) || '[]');
+
+  const idx = usuarios.findIndex(function (u) { return u.usuario === usuarioViejo; });
+  if (idx === -1) {
+    Logger.log('No se encontró "' + usuarioViejo + '" en la lista actual. Usuarios existentes: ' +
+      usuarios.map(function (u) { return u.usuario; }).join(', '));
+    return;
+  }
+
+  const rolConservado = usuarios[idx].rol;
+  usuarios[idx] = { usuario: usuarioNuevo, claveHash: claveHashNueva, rol: rolConservado };
+  props.setProperty(AUTH_CONFIG.PROPIEDAD_USUARIOS, JSON.stringify(usuarios));
+  Logger.log('"' + usuarioViejo + '" reemplazado por "' + usuarioNuevo + '" (rol conservado: ' + rolConservado + ').');
+}
+
+// Para aplicar el cambio de hoy (UnionA → MariaR): selecciona esta función
+// en el desplegable del editor de Apps Script y ejecútala UNA SOLA VEZ.
+function aplicarReemplazoUnionAPorMariaR_HOY() {
+  reemplazarUsuario_('UnionA', 'MariaR', 'a552c4e4bbc62c80c8e8626da66314184270fd1d840af10c50041c431d97aefa');
 }
 
 // ════════════════════════════════════════════════════════
