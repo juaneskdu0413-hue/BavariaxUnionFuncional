@@ -75,7 +75,7 @@ function configurarCredencialesAuth() {
   const usuarios = [
     { usuario: 'juaneskdu', claveHash: 'de355d443082c1608e3e565aac0a9c85d4dcb2b9ab2585fdae7698e8daae27fe', rol: 'admin' },
     { usuario: 'NelsonC',   claveHash: 'ff1873b60679c72b83aca49cba82fd4c43a5ae1739d508595a99dccaff6c981e', rol: 'admin' },
-    { usuario: 'MariaR',    claveHash: 'a552c4e4bbc62c80c8e8626da66314184270fd1d840af10c50041c431d97aefa', rol: 'cliente' },
+    { usuario: 'MariaR',    claveHash: 'a552c4e4bbc62c80c8e8626da66314184270fd1d840af10c50041c431d97aefa', rol: 'admin' },
     { usuario: 'andresfp',  claveHash: 'f6af6e4d6c9315f6a693f27a4868f405edf15d97cbf661d8ac29071b2b6b5961', rol: 'admin' },
   ];
   props.setProperty(AUTH_CONFIG.PROPIEDAD_USUARIOS, JSON.stringify(usuarios));
@@ -87,11 +87,13 @@ function configurarCredencialesAuth() {
 // REEMPLAZAR UN SOLO USUARIO — seguro para producción
 // ════════════════════════════════════════════════════════
 // A diferencia de configurarCredencialesAuth() (que pisa TODA la lista),
-// esta función lee la lista tal como está HOY en Script Properties,
-// reemplaza solo la fila indicada por usuarioViejo, y conserva el rol que
-// ese usuario ya tenía. Cualquier otro usuario que exista en producción
-// (aunque no coincida con lo que dice este archivo) queda intacto.
-function reemplazarUsuario_(usuarioViejo, usuarioNuevo, claveHashNueva) {
+// esta función lee la lista tal como está HOY en Script Properties y
+// reemplaza solo la fila indicada por usuarioViejo. El rol se pide
+// explícito (rolNuevo) en vez de heredar el del usuario reemplazado —
+// reemplazar a alguien no implica querer el mismo nivel de acceso.
+// Cualquier otro usuario que exista en producción (aunque no coincida
+// con lo que dice este archivo) queda intacto.
+function reemplazarUsuario_(usuarioViejo, usuarioNuevo, claveHashNueva, rolNuevo) {
   const props = PropertiesService.getScriptProperties();
   const usuarios = JSON.parse(props.getProperty(AUTH_CONFIG.PROPIEDAD_USUARIOS) || '[]');
 
@@ -102,16 +104,15 @@ function reemplazarUsuario_(usuarioViejo, usuarioNuevo, claveHashNueva) {
     return;
   }
 
-  const rolConservado = usuarios[idx].rol;
-  usuarios[idx] = { usuario: usuarioNuevo, claveHash: claveHashNueva, rol: rolConservado };
+  usuarios[idx] = { usuario: usuarioNuevo, claveHash: claveHashNueva, rol: rolNuevo };
   props.setProperty(AUTH_CONFIG.PROPIEDAD_USUARIOS, JSON.stringify(usuarios));
-  Logger.log('"' + usuarioViejo + '" reemplazado por "' + usuarioNuevo + '" (rol conservado: ' + rolConservado + ').');
+  Logger.log('"' + usuarioViejo + '" reemplazado por "' + usuarioNuevo + '" con rol "' + rolNuevo + '".');
 }
 
 // Para aplicar el cambio de hoy (UnionA → MariaR): selecciona esta función
 // en el desplegable del editor de Apps Script y ejecútala UNA SOLA VEZ.
 function aplicarReemplazoUnionAPorMariaR_HOY() {
-  reemplazarUsuario_('UnionA', 'MariaR', 'a552c4e4bbc62c80c8e8626da66314184270fd1d840af10c50041c431d97aefa');
+  reemplazarUsuario_('UnionA', 'MariaR', 'a552c4e4bbc62c80c8e8626da66314184270fd1d840af10c50041c431d97aefa', 'admin');
 }
 
 // ════════════════════════════════════════════════════════
