@@ -1,32 +1,36 @@
 /**
  * ════════════════════════════════════════════════════════
- * BAVARIA × UNIÓN ANDINA — Autenticación server-side (PROPUESTA, NO DESPLEGADA)
+ * BAVARIA × UNIÓN ANDINA — Autenticación server-side (ACTIVA EN PRODUCCIÓN)
  * ════════════════════════════════════════════════════════
- * Este archivo NO está activo todavía. Es el diseño del fix real para la
- * brecha de seguridad de USUARIOS_ADMIN: hoy el login se valida 100% en
- * el navegador (ver Logica.js / admin.html), lo que significa que:
- *   1) Las contraseñas (hasheadas o no) viven en JavaScript público.
- *   2) Cualquiera puede saltarse el login por completo escribiendo una
+ * Este archivo está desplegado y activo desde el 15 de septiembre de 2026
+ * (commit 1f1054f). Reemplazó la validación de login que antes se hacía
+ * 100% en el navegador (en Logica.js/admin.html), que tenía 3 problemas:
+ *   1) Las contraseñas (hasheadas o no) vivían en JavaScript público.
+ *   2) Cualquiera podía saltarse el login por completo escribiendo una
  *      sesión falsa en localStorage desde la consola del navegador.
- *   3) doGet()/doPost() no piden ningún token — cualquiera con la URL
- *      de Apps Script (que también es pública, está en el JS) puede leer
+ *   3) doGet()/doPost() no pedían ningún token — cualquiera con la URL
+ *      de Apps Script (que también es pública, está en el JS) podía leer
  *      TODOS los registros (GPS y notas de todos los conductores) con un
  *      simple curl, sin pasar por ningún login, real o falso.
  *
  * Este archivo resuelve las 3 cosas moviendo la verificación al único
  * lugar que el atacante no controla: este script de Apps Script.
  *
- * QUÉ FALTA PARA ACTIVAR ESTO (ver instrucciones al final del archivo):
- *   1) Ejecutar configurarCredencialesAuth() UNA VEZ desde el editor
- *      (rellenando antes los hashes reales) para guardar el secreto y
- *      las credenciales en PropertiesService — nunca en un archivo.
- *   2) Agregar 3 líneas al inicio de tu doPost(e) y doGet(e) reales en
- *      Código.gs (el snippet exacto está abajo).
- *   3) Actualizar Logica.js/admin.html para llamar al login por fetch()
- *      en vez de comparar localmente, y enviar el token en cada llamada
- *      a doGet/doPost. Ese cambio de frontend NO está aplicado todavía
- *      a propósito — se prepara junto con el despliegue del backend para
- *      no romper el login en producción a mitad de camino.
+ * ESTADO CONFIRMADO — última verificación en vivo: 2026-10-03, con curl
+ * directo contra la URL real de producción (sin pasar por ningún frontend):
+ *   - doGet sin token, con token inválido y con token con firma falsa →
+ *     los tres casos responden {"error":"No autorizado"}.
+ *   - admin.html manda el token en cada llamada (admin.html:1599).
+ *   - Los 3 pasos de activación que pedía este archivo —
+ *     configurarCredencialesAuth() ejecutado, snippet pegado en el
+ *     doGet/doPost real, frontend actualizado — ya están completos.
+ *     La sección INTEGRACIÓN más abajo documenta lo que YA está pegado
+ *     en Código.gs, no una tarea pendiente.
+ *
+ * Código.gs no vive en este repo (solo en el editor de Apps Script), así
+ * que lo de arriba se confirmó probando el endpoint en vivo (caja negra),
+ * no leyendo el archivo real. Si algo deja de cuadrar con lo que dice
+ * aquí, repite esa prueba antes de asumir que algo cambió.
  */
 
 // ════════════════════════════════════════════════════════
@@ -193,9 +197,10 @@ function validarToken_(token) {
 }
 
 // ════════════════════════════════════════════════════════
-// INTEGRACIÓN — snippet exacto para pegar en tu doPost(e)/doGet(e) reales
-// (en Código.gs, que NO se toca automáticamente porque no tengo ese
-// archivo — esto hay que pegarlo a mano quirúrgicamente)
+// INTEGRACIÓN — esto YA ESTÁ pegado en tu doPost(e)/doGet(e) reales
+// (en Código.gs, que no vive en este repo — se documenta aquí como
+// referencia de lo que hay en producción, confirmado en vivo el
+// 2026-10-03, no como una tarea pendiente)
 // ════════════════════════════════════════════════════════
 /*
   Al INICIO de tu doPost(e) actual, antes de la lógica que ya tienes que
