@@ -42,7 +42,7 @@ const CONFIG = {
 
   // A quién avisar por email cuando hay una jornada abierta.
   // Puede ser una lista separada por comas: 'correo1@x.com,correo2@x.com'
-  EMAIL_DESTINO: 'juaneskdu0413@gmail.com,andres.rodriguez@unatrans.com,maria.romero@unatrans.com,john.ramirez@unatrans.com',
+  EMAIL_DESTINO: 'juaneskdu0413@gmail.com,andres.rodriguez@unatrans.com,john.ramirez@unatrans.com',
 
   // Umbral de horas sin "Fin jornada" para considerar la alerta.
   UMBRAL_HORAS: 10,
