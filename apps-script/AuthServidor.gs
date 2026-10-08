@@ -79,7 +79,7 @@ function configurarCredencialesAuth() {
   const usuarios = [
     { usuario: 'juaneskdu', claveHash: 'de355d443082c1608e3e565aac0a9c85d4dcb2b9ab2585fdae7698e8daae27fe', rol: 'admin' },
     { usuario: 'NelsonC',   claveHash: 'ff1873b60679c72b83aca49cba82fd4c43a5ae1739d508595a99dccaff6c981e', rol: 'admin' },
-    { usuario: 'MariaR',    claveHash: 'a552c4e4bbc62c80c8e8626da66314184270fd1d840af10c50041c431d97aefa', rol: 'admin' },
+    { usuario: 'JhonR',     claveHash: '562386769c2516a081f20c74773904e43f7b840db92880cf494ee02fc4a6ba1e', rol: 'admin' },
     { usuario: 'andresfp',  claveHash: 'f6af6e4d6c9315f6a693f27a4868f405edf15d97cbf661d8ac29071b2b6b5961', rol: 'admin' },
   ];
   props.setProperty(AUTH_CONFIG.PROPIEDAD_USUARIOS, JSON.stringify(usuarios));
@@ -117,6 +117,12 @@ function reemplazarUsuario_(usuarioViejo, usuarioNuevo, claveHashNueva, rolNuevo
 // en el desplegable del editor de Apps Script y ejecútala UNA SOLA VEZ.
 function aplicarReemplazoUnionAPorMariaR_HOY() {
   reemplazarUsuario_('UnionA', 'MariaR', 'a552c4e4bbc62c80c8e8626da66314184270fd1d840af10c50041c431d97aefa', 'admin');
+}
+
+// Para aplicar el cambio de hoy (MariaR → JhonR): selecciona esta función
+// en el desplegable del editor de Apps Script y ejecútala UNA SOLA VEZ.
+function aplicarReemplazoMariaRPorJhonR_HOY() {
+  reemplazarUsuario_('MariaR', 'JhonR', '562386769c2516a081f20c74773904e43f7b840db92880cf494ee02fc4a6ba1e', 'admin');
 }
 
 // ════════════════════════════════════════════════════════
