@@ -232,6 +232,12 @@ body {
   font-family: 'IBM Plex Mono', monospace; font-size: 15px;
   letter-spacing: .08em; color: var(--bav-red-btn);
 }
+#placa-relevo-box { margin-bottom: 18px; }
+#placa-relevo-input {
+  font-family: 'IBM Plex Mono', monospace; font-size: 15px; letter-spacing: .08em;
+  text-transform: uppercase;
+}
+#placa-relevo-err { margin-top: 6px; }
 
 /* ═══════════════════════════════════
    CHIPS IDENTIDAD — lista de conductores (filas limpias)

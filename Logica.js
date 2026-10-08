@@ -47,7 +47,22 @@ const CONDUCTORES_DEFAULT = [
   { nombre: 'OSCAR STIVEN OCHOA PEDREROS',   cedula: '1022443892', placa: 'JVK594' },
   { nombre: 'JOSE EDGARDO HERNANDEZ CRUZ',   cedula: '79750999',   placa: 'JVK129' },
   { nombre: 'YESID GUERRERO SERNA',          cedula: '1051589874', placa: 'JVK130' },
+  // Conductor de relevo: no tiene vehículo fijo asignado, así que `placa` queda
+  // en null a propósito. `relevo: true` es lo que hace que el login le muestre
+  // un campo de placa editable en vez del texto fijo de los demás (ver
+  // entrarConSesion), y que admin.html no lo cuente como "sin registros" los
+  // días que no conduce (ver conductoresConActividadHoy en admin.html).
+  { nombre: 'FREDY SANTANA ACUÑA',           cedula: '1024483571', placa: null, relevo: true },
 ];
+
+// Formato de placa colombiana: 3 letras + 3 números, ej. "JVK595".
+const REGEX_PLACA = /^[A-Z]{3}[0-9]{3}$/;
+
+// Mayúsculas y sin espacios — así el conductor de relevo puede escribir
+// "jvk 595" o "jvk595" y ambos terminan validando igual.
+function normalizarPlaca(valor) {
+  return String(valor || '').toUpperCase().replace(/\s+/g, '');
+}
 
 // ════════════════════════════════════════════════════════
 // ESTADO
@@ -120,12 +135,14 @@ function crearChipConductor(c) {
   div.className = 'chip-opcion';
   div.dataset.rol = 'conductor';
   div.dataset.val = c.nombre;
-  div.dataset.placa = c.placa;
+  div.dataset.placa = c.placa || '';
+  div.dataset.relevo = c.relevo ? '1' : '';
 
   const nombreTxt = document.createTextNode(c.nombre);
   const sub = document.createElement('div');
   sub.className = 'chip-sub';
-  sub.textContent = c.cedula ? `CC ${enmascararCedula(c.cedula)} · Placa ${c.placa}` : `Placa ${c.placa}`;
+  const placaTxt = c.relevo ? 'Placa del día (la escribes al entrar)' : `Placa ${c.placa}`;
+  sub.textContent = c.cedula ? `CC ${enmascararCedula(c.cedula)} · ${placaTxt}` : placaTxt;
 
   div.appendChild(nombreTxt);
   div.appendChild(sub);
@@ -159,7 +176,7 @@ function inicializarLogin() {
     c.addEventListener('click', () => {
       seleccionarChip('#chips-identidad', c);
       rolElegido = c.dataset.rol;
-      datosElegidos = { nombre: c.dataset.val, placa: c.dataset.placa || null };
+      datosElegidos = { nombre: c.dataset.val, placa: c.dataset.placa || null, relevo: c.dataset.relevo === '1' };
       document.getElementById('admin-clave-box').style.display = (rolElegido === 'admin') ? 'block' : 'none';
       document.getElementById('login-err').classList.remove('vis');
     });
@@ -199,7 +216,7 @@ function inicializarLogin() {
       return;
     }
 
-    sesion = { rol: 'conductor', nombre: datosElegidos.nombre, placa: datosElegidos.placa };
+    sesion = { rol: 'conductor', nombre: datosElegidos.nombre, placa: datosElegidos.placa, relevo: datosElegidos.relevo };
     sessionStorage.setItem(SESION_KEY, JSON.stringify(sesion));
     entrarConSesion();
   });
@@ -213,9 +230,27 @@ function entrarConSesion() {
   document.getElementById('tab-conductor').style.display = 'inline-block';
   document.getElementById('tab-panel').style.display = 'none';
   conductorSel = sesion.nombre;
-  placaSel = sesion.placa;
   document.getElementById('conductor-fijo').textContent = sesion.nombre;
-  document.getElementById('placa-fija').textContent = sesion.placa;
+
+  const placaFija = document.getElementById('placa-fija');
+  const placaRelevoBox = document.getElementById('placa-relevo-box');
+  const placaRelevoInput = document.getElementById('placa-relevo-input');
+
+  if (sesion.relevo) {
+    // Sin placa fija: el conductor la escribe cada día, así que no se asume
+    // ninguna hasta que escriba algo válido (ver inicializarPlacaRelevo).
+    placaSel = null;
+    placaFija.style.display = 'none';
+    placaRelevoBox.style.display = 'block';
+    placaRelevoInput.value = '';
+    document.getElementById('placa-relevo-err').classList.remove('vis');
+  } else {
+    placaSel = sesion.placa;
+    placaFija.style.display = 'block';
+    placaFija.textContent = sesion.placa;
+    placaRelevoBox.style.display = 'none';
+  }
+
   cambiarVista('conductor');
 }
 
@@ -224,6 +259,8 @@ function cerrarSesion() {
   sesion = null;
   conductorSel = null;
   placaSel = null;
+  document.getElementById('placa-relevo-input').value = '';
+  document.getElementById('placa-relevo-err').classList.remove('vis');
   document.getElementById('tabs-nav').style.display = 'none';
   document.querySelectorAll('.vista').forEach(el => el.classList.remove('activa'));
   document.getElementById('vista-login').classList.add('activa');
@@ -248,6 +285,38 @@ function inicializarBotones() {
       tipoSel = c.dataset.val;
       actualizarNovedadBox();
     });
+  });
+
+  inicializarPlacaRelevo();
+}
+
+// Campo de placa del conductor de relevo (sin placa fija): normaliza lo que
+// escribe (mayúsculas, sin espacios) en cada tecla y solo deja placaSel con
+// un valor cuando tiene formato de placa colombiana válido (3 letras + 3
+// números). Mientras no sea válido, placaSel queda en null y enviarCheckin()
+// bloquea el registro igual que si no hubiera seleccionado vehículo.
+function inicializarPlacaRelevo() {
+  const input = document.getElementById('placa-relevo-input');
+  const err = document.getElementById('placa-relevo-err');
+  if (!input) return;
+
+  input.addEventListener('input', () => {
+    const normalizada = normalizarPlaca(input.value);
+    input.value = normalizada;
+
+    if (!normalizada) {
+      placaSel = null;
+      err.classList.remove('vis');
+      return;
+    }
+
+    if (REGEX_PLACA.test(normalizada)) {
+      placaSel = normalizada;
+      err.classList.remove('vis');
+    } else {
+      placaSel = null;
+      err.classList.add('vis');
+    }
   });
 }
 
@@ -352,7 +421,12 @@ async function enviarCheckin() {
   const novedad = document.getElementById('novedad').value.trim();
 
   if (!conductorSel) { alert('Selecciona el conductor.'); return; }
-  if (!placaSel)     { alert('Selecciona el vehículo.'); return; }
+  if (!placaSel) {
+    alert(sesion && sesion.relevo
+      ? 'Escribe una placa válida para hoy (3 letras y 3 números, ej: JVK595).'
+      : 'Selecciona el vehículo.');
+    return;
+  }
   if (!tipoSel)      { alert('Selecciona el tipo de registro.'); return; }
   if (!nota)         { alert('Escribe una nota o el lugar donde estás.'); return; }
   if (tipoSel === 'Entrada taller' && !novedad) { alert('Describe la novedad o motivo del mantenimiento.'); return; }

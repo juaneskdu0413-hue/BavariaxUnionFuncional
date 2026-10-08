@@ -1418,6 +1418,11 @@ const CONDUCTORES_DEFAULT = [
   { nombre: 'OSCAR STIVEN OCHOA PEDREROS',   placa: 'JVK594' },
   { nombre: 'JOSE EDGARDO HERNANDEZ CRUZ',   placa: 'JVK129' },
   { nombre: 'YESID GUERRERO SERNA',          placa: 'JVK130' },
+  // Relevo sin placa fija (ver mismo registro en Logica.js). `relevo: true`
+  // hace que conductoresConActividadHoy() lo oculte de las vistas "de hoy"
+  // (semáforo, inactivos, resumen) los días que no conduce, en vez de
+  // mostrarlo como "Sin registros hoy" en rojo permanentemente.
+  { nombre: 'FREDY SANTANA ACUÑA',           placa: null, relevo: true },
 ];
 let CONDUCTORES_FIJOS = (function() {
   try {
@@ -1520,7 +1525,7 @@ function renderConductores() {
       <div class="cond-item-num">${i + 1}</div>
       <div class="cond-item-info">
         <div class="cond-item-nombre">${c.nombre}</div>
-        <span class="cond-item-placa">${c.placa}</span>
+        <span class="cond-item-placa">${c.relevo ? 'Sin placa fija (relevo)' : c.placa}</span>
       </div>
       <button class="btn-eliminar" onclick="eliminarConductor(${i})">Eliminar</button>
     </div>`).join('');
@@ -1645,6 +1650,21 @@ const SEMAFORO_CONFIG = {
   sin:      { emoji: '🔴', clase: 'semaforo-sin' },
 };
 
+// Placa a mostrar para un conductor en las vistas "de hoy": la fija si la
+// tiene, o la que escribió ese día si es de relevo (conductor.placa es null).
+function placaDelDia(conductor, datos) {
+  if (conductor.placa) return conductor.placa;
+  return datos.regs.length ? datos.regs[datos.regs.length - 1].placa : '';
+}
+
+// Conductores a mostrar en las vistas "de hoy" (semáforo, inactivos, resumen):
+// todos los fijos, más los de relevo (sin placa fija) SOLO los días que de
+// verdad tuvieron algún registro — si no, un relevo saldría como "Sin
+// registros hoy" en rojo todos los días que no le toca conducir.
+function conductoresConActividadHoy(porConductor) {
+  return CONDUCTORES_FIJOS.filter(c => !c.relevo || porConductor[c.nombre.trim()]);
+}
+
 // Dibuja el semáforo compacto: un vistazo rápido del estado de TODOS los conductores fijos,
 // sin importar el filtro por conductor activo del dashboard (a diferencia de renderTarjetas)
 function renderSemaforo() {
@@ -1655,7 +1675,7 @@ function renderSemaforo() {
   const registrosHoy = todosRegistros.filter(r => String(r.fecha).slice(0,10) === hoy);
   const porConductor = agruparRegistrosPorConductor(registrosHoy);
 
-  grid.innerHTML = CONDUCTORES_FIJOS.map(c => {
+  grid.innerHTML = conductoresConActividadHoy(porConductor).map(c => {
     const d = datosCondutor(c.nombre, porConductor);
     const cfg = SEMAFORO_CONFIG[d.estadoKey];
     const ultimoRegistro = d.regs.length ? d.regs[d.regs.length - 1] : null;
@@ -1696,9 +1716,9 @@ function renderAlertas() {
   const filas = pendientes.map(({ idx, conductor, datos }) => `
     <tr>
       <td class="td-nombre">${esc(conductor.nombre)}</td>
-      <td><span class="td-placa">${esc(conductor.placa)}</span></td>
+      <td><span class="td-placa">${esc(datos.inicio.placa)}</span></td>
       <td class="td-hora">${horaDesdeTimestamp(datos.inicio.timestamp)}</td>
-      <td class="td-estado">${rolActual === 'cliente' ? '—' : `<button class="btn btn-red" onclick="cerrarManualmente(${idx})">Cerrar manualmente</button>`}</td>
+      <td class="td-estado">${rolActual === 'cliente' ? '—' : `<button class="btn btn-red" onclick="cerrarManualmente(${idx}, '${esc(datos.inicio.placa)}')">Cerrar manualmente</button>`}</td>
     </tr>`).join('');
 
   cont.innerHTML = `
@@ -1711,7 +1731,7 @@ function renderAlertas() {
 }
 
 // Registra un "Fin jornada" manual (con nota fija) para un conductor con checkout pendiente
-async function cerrarManualmente(idx) {
+async function cerrarManualmente(idx, placaDelDia) {
   if (rolActual === 'cliente') return; // el rol cliente no puede cerrar jornadas manualmente
   const conductor = CONDUCTORES_FIJOS[idx];
   if (!conductor) return;
@@ -1722,7 +1742,11 @@ async function cerrarManualmente(idx) {
   const registro = {
     id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
     conductor: conductor.nombre,
-    placa: conductor.placa,
+    // Usa la placa con la que de verdad quedó abierta la jornada hoy (relevante
+    // para el conductor de relevo, que no tiene placa fija en CONDUCTORES_FIJOS),
+    // no la placa fija de la lista — así el cierre queda agrupado con el resto
+    // de registros del día en historial/informes.
+    placa: placaDelDia || conductor.placa,
     tipo: 'Fin jornada',
     nota: 'Cierre manual por coordinador',
     lat: null,
@@ -1763,7 +1787,7 @@ function renderFiltros() {
   row.appendChild(crearBtn('Todos', 'todos'));
   activos.forEach(c => {
     const cf = CONDUCTORES_FIJOS.find(x => x.nombre.trim() === c);
-    row.appendChild(crearBtn(cf ? cf.placa : c.split(' ')[0], c));
+    row.appendChild(crearBtn(cf && cf.placa ? cf.placa : c.split(' ')[0], c));
   });
 }
 
@@ -1776,7 +1800,7 @@ function renderTarjetas() {
   let conductoresActivos, conductoresInactivos;
   if (filtroActivo === 'todos') {
     conductoresActivos   = CONDUCTORES_FIJOS.filter(c => porConductor[c.nombre.trim()]);
-    conductoresInactivos = CONDUCTORES_FIJOS.filter(c => !porConductor[c.nombre.trim()]);
+    conductoresInactivos = conductoresConActividadHoy(porConductor).filter(c => !porConductor[c.nombre.trim()]);
   } else {
     const c = CONDUCTORES_FIJOS.find(x => x.nombre.trim() === filtroActivo);
     conductoresActivos   = c ? [c] : [];
@@ -1845,13 +1869,14 @@ function datosCondutor(nombre, porConductor) {
 function crearTarjeta(conductor, registros) {
   const { inicio, fin, paradas, duracionTxt, estadoKey } = calcularEstadoJornada(registros);
   const estadoBadge = TARJETA_BADGE_HTML[estadoKey];
+  const placa = placaDelDia(conductor, { regs: registros });
 
   const card = document.createElement('div');
   card.className = 'tarjeta';
   card.innerHTML = `
     <div class="tarjeta-cabecera">
       <div class="tarjeta-nombre">${esc(conductor.nombre)}</div>
-      <div class="tarjeta-placa">${esc(conductor.placa)}</div>
+      <div class="tarjeta-placa">${esc(placa)}</div>
     </div>
     <div class="tarjeta-resumen">
       <div class="resumen-item">
@@ -1925,7 +1950,7 @@ function crearTarjetaInactivo(conductor) {
 // Cuenta cuántos conductores fijos caen en cada estado: jornada completa, en ruta (incluye "parcial") o sin actividad
 function contarEstadosConductores(porConductor) {
   let completas = 0, ruta = 0, sin = 0;
-  CONDUCTORES_FIJOS.forEach(c => {
+  conductoresConActividadHoy(porConductor).forEach(c => {
     const estadoKey = datosCondutor(c.nombre, porConductor).estadoKey;
     if      (estadoKey === 'completa')                          completas++;
     else if (estadoKey === 'ruta' || estadoKey === 'parcial')    ruta++;
@@ -1961,7 +1986,7 @@ function abrirResumenGeneral() {
 
   const tbody = document.getElementById('tabla-body');
   tbody.innerHTML = '';
-  CONDUCTORES_FIJOS.forEach(c => {
+  conductoresConActividadHoy(porConductor).forEach(c => {
     const d = datosCondutor(c.nombre, porConductor);
     const tr = document.createElement('tr');
     if (d.estadoKey === 'sin') tr.classList.add('inactiva');
@@ -1970,7 +1995,7 @@ function abrirResumenGeneral() {
       : c.nombre;
     tr.innerHTML = `
       <td class="td-nombre">${esc(nombreCorto)}</td>
-      <td><span class="td-placa">${esc(c.placa)}</span></td>
+      <td><span class="td-placa">${esc(placaDelDia(c, d))}</span></td>
       <td class="td-hora ${d.inicio ? '' : 'vacio'}">${d.inicio ? horaDesdeTimestamp(d.inicio.timestamp) : '—'}</td>
       <td class="td-hora ${d.fin ? '' : 'vacio'}">${d.fin ? horaDesdeTimestamp(d.fin.timestamp) : '—'}</td>
       <td class="td-paradas ${d.paradas.length ? '' : 'vacio'}">${d.paradas.length || '—'}</td>
@@ -2009,12 +2034,12 @@ function copiarResumenGeneral() {
   L.push('');
   L.push('─────────────────────────');
   L.push('');
-  CONDUCTORES_FIJOS.forEach(c => {
+  conductoresConActividadHoy(porConductor).forEach(c => {
     const d = datosCondutor(c.nombre, porConductor);
     const ini = d.inicio ? horaDesdeTimestamp(d.inicio.timestamp) : '—';
     const fin = d.fin    ? horaDesdeTimestamp(d.fin.timestamp)    : '—';
     L.push(`*${c.nombre}*`);
-    L.push(`${c.placa}  ·  ${ini} → ${fin}`);
+    L.push(`${placaDelDia(c, d)}  ·  ${ini} → ${fin}`);
     L.push(`${ICONOS[d.estadoKey]} ${TEXTOS[d.estadoKey]}`);
     L.push('');
   });
@@ -2052,7 +2077,7 @@ function copiarWhatsAppIndividual(conductor, registros, duracionTxt, btn) {
   const { paradas, estadoKey } = calcularEstadoJornada(registros);
 
   const L = [];
-  L.push(`🚛 *${conductor.nombre} — ${conductor.placa}*`);
+  L.push(`🚛 *${conductor.nombre} — ${placaDelDia(conductor, { regs: registros })}*`);
   L.push(`📅 ${fechaLarga(new Date())}`);
   L.push('');
   registros.forEach(r => {
@@ -2111,7 +2136,9 @@ function initHistorial() {
   };
 
   contenedor.appendChild(crearChip('Todos', 'todos'));
-  CONDUCTORES_FIJOS.forEach(c => contenedor.appendChild(crearChip(c.placa, c.nombre.trim())));
+  // El conductor de relevo no tiene una sola placa que lo identifique en el
+  // historial (usa una distinta cada día) — el chip muestra su nombre.
+  CONDUCTORES_FIJOS.forEach(c => contenedor.appendChild(crearChip(c.placa || c.nombre.trim().split(' ')[0], c.nombre.trim())));
 
   // Conductores históricos
   const nombresActivos = new Set(CONDUCTORES_FIJOS.map(c => c.nombre.trim()));
@@ -2706,7 +2733,10 @@ async function descargarExcel() {
       key: r.conductor.trim() + '||' + r.placa, nombre: r.conductor.trim(), placa: r.placa,
     }));
     const nombresConDatos = new Set(Object.values(porConductorPlaca).map(g => g.nombre));
-    CONDUCTORES_FIJOS.forEach(c => {
+    // El conductor de relevo (sin placa fija) no se agrega como fila en cero
+    // si no condujo en el rango — no tiene una "placa" propia que mostrar, y
+    // agregarlo igual mostraría "null" en el Excel.
+    CONDUCTORES_FIJOS.filter(c => !c.relevo).forEach(c => {
       const nombre = c.nombre.trim();
       if (!nombresConDatos.has(nombre)) {
         porConductorPlaca[nombre + '||' + c.placa] = { nombre, placa: c.placa, dias: {} };

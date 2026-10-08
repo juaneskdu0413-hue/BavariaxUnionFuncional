@@ -92,6 +92,13 @@
 
       <label class="form-lbl">Vehículo</label>
       <div id="placa-fija"></div>
+      <!-- Solo para el conductor de relevo (sin placa fija, ver CONDUCTORES_DEFAULT
+           en Logica.js): entrarConSesion() alterna entre este bloque y placa-fija. -->
+      <div id="placa-relevo-box" style="display:none;">
+        <input type="text" class="admin-login-input" id="placa-relevo-input"
+          placeholder="Placa de hoy, ej: JVK595" maxlength="6" autocomplete="off">
+        <div class="gps-err" id="placa-relevo-err">Formato de placa inválido. Debe ser 3 letras y 3 números, ej: JVK595.</div>
+      </div>
 
       <label class="form-lbl">Tipo de registro</label>
       <div class="chip-grupo" id="chips-tipo" style="margin-bottom:18px;">
