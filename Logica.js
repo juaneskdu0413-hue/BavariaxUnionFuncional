@@ -53,6 +53,7 @@ const CONDUCTORES_DEFAULT = [
   // entrarConSesion), y que admin.html no lo cuente como "sin registros" los
   // días que no conduce (ver conductoresConActividadHoy en admin.html).
   { nombre: 'FREDY SANTANA ACUÑA',           cedula: '1024483571', placa: null, relevo: true },
+  { nombre: 'CESAR ANTONIO CHURQUE LEÓN',    cedula: '1033707928', placa: null, relevo: true },
 ];
 
 // Formato de placa colombiana: 3 letras + 3 números, ej. "JVK595".
