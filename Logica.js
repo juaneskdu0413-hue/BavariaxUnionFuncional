@@ -56,13 +56,17 @@ const CONDUCTORES_DEFAULT = [
   { nombre: 'CESAR ANTONIO CHURQUE LEÓN',    cedula: '1033707928', placa: null, relevo: true },
 ];
 
-// Formato de placa colombiana: 3 letras + 3 números, ej. "JVK595".
-const REGEX_PLACA = /^[A-Z]{3}[0-9]{3}$/;
+// Formatos de placa colombiana que puede traer el vehículo del día del
+// relevo: carro (3 letras + 3 números, ej. "JVK595"), moto (3 letras +
+// 2 números + 1 letra, ej. "ABC12D") o remolque (R/S + 5 números, ej.
+// "R12345"). Explícitos a propósito — no un patrón más abierto que
+// aceptaría cualquier combinación de letras y números.
+const REGEX_PLACA = /^([A-Z]{3}[0-9]{3}|[A-Z]{3}[0-9]{2}[A-Z]|[RS][0-9]{5})$/;
 
-// Mayúsculas y sin espacios — así el conductor de relevo puede escribir
-// "jvk 595" o "jvk595" y ambos terminan validando igual.
+// Mayúsculas y sin espacios ni guiones — así el conductor de relevo puede
+// escribir "jvk 595", "jvk595" o "JVK-595" y los tres terminan validando igual.
 function normalizarPlaca(valor) {
-  return String(valor || '').toUpperCase().replace(/\s+/g, '');
+  return String(valor || '').toUpperCase().replace(/[\s-]+/g, '');
 }
 
 // ════════════════════════════════════════════════════════
@@ -292,16 +296,19 @@ function inicializarBotones() {
 }
 
 // Campo de placa del conductor de relevo (sin placa fija): normaliza lo que
-// escribe (mayúsculas, sin espacios) en cada tecla y solo deja placaSel con
-// un valor cuando tiene formato de placa colombiana válido (3 letras + 3
-// números). Mientras no sea válido, placaSel queda en null y enviarCheckin()
-// bloquea el registro igual que si no hubiera seleccionado vehículo.
+// escribe (mayúsculas, sin espacios ni guiones) y solo deja placaSel con un
+// valor cuando tiene alguno de los formatos de placa colombiana válidos
+// (carro, moto o remolque — ver REGEX_PLACA). Mientras no sea válido,
+// placaSel queda en null y enviarCheckin() bloquea el registro igual que si
+// no hubiera seleccionado vehículo. Escucha 'input', 'change' y 'blur' para
+// no depender de un solo evento si el valor llega por autocompletado o
+// pegado sin disparar 'input' en algunos navegadores.
 function inicializarPlacaRelevo() {
   const input = document.getElementById('placa-relevo-input');
   const err = document.getElementById('placa-relevo-err');
   if (!input) return;
 
-  input.addEventListener('input', () => {
+  const sincronizarPlaca = () => {
     const normalizada = normalizarPlaca(input.value);
     input.value = normalizada;
 
@@ -318,7 +325,11 @@ function inicializarPlacaRelevo() {
       placaSel = null;
       err.classList.add('vis');
     }
-  });
+  };
+
+  input.addEventListener('input', sincronizarPlaca);
+  input.addEventListener('change', sincronizarPlaca);
+  input.addEventListener('blur', sincronizarPlaca);
 }
 
 // Ajusta visibilidad, etiqueta, placeholder y obligatoriedad del campo "novedad"
@@ -421,10 +432,22 @@ async function enviarCheckin() {
   const nota = document.getElementById('nota').value.trim();
   const novedad = document.getElementById('novedad').value.trim();
 
+  // Recalcula placaSel desde el campo justo antes de validar: si el valor
+  // llegó por autocompletado o pegado sin disparar input/change/blur, esto
+  // evita bloquear el registro con el campo visualmente lleno y válido.
+  if (sesion && sesion.relevo) {
+    const placaInput = document.getElementById('placa-relevo-input');
+    if (placaInput) {
+      const normalizada = normalizarPlaca(placaInput.value);
+      placaInput.value = normalizada;
+      placaSel = REGEX_PLACA.test(normalizada) ? normalizada : null;
+    }
+  }
+
   if (!conductorSel) { alert('Selecciona el conductor.'); return; }
   if (!placaSel) {
     alert(sesion && sesion.relevo
-      ? 'Escribe una placa válida para hoy (3 letras y 3 números, ej: JVK595).'
+      ? 'Escribe una placa válida para hoy: carro (3 letras y 3 números, ej: JVK595), moto (3 letras, 2 números y 1 letra, ej: ABC12D) o remolque (R o S y 5 números, ej: R12345).'
       : 'Selecciona el vehículo.');
     return;
   }
