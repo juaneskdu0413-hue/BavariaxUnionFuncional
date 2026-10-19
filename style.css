@@ -312,6 +312,13 @@ body {
 .gps-coords.vis { display: block; }
 .gps-err { font-size: 12px; color: var(--s-red); display: none; }
 .gps-err.vis { display: block; }
+.placa-aviso { font-size: 12px; color: var(--s-amber); margin-top: 6px; display: none; }
+.placa-aviso.vis { display: block; }
+.placa-debug {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--s-blue);
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: 5px; padding: 5px 10px; margin-top: 6px; word-break: break-all;
+}
 .gps-btn {
   padding: 11px 26px; background: var(--ua-green-btn); color: white; border: none;
   border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 12px;

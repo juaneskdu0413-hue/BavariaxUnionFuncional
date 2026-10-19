@@ -96,8 +96,12 @@
            en Logica.js): entrarConSesion() alterna entre este bloque y placa-fija. -->
       <div id="placa-relevo-box" style="display:none;">
         <input type="text" class="admin-login-input" id="placa-relevo-input"
-          placeholder="Placa de hoy, ej: JVK595" maxlength="10" autocomplete="off">
+          placeholder="Placa de hoy, ej: JVK595" maxlength="10" autocomplete="off"
+          autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
         <div class="gps-err" id="placa-relevo-err">Formato de placa inválido. Debe ser carro (3 letras y 3 números, ej: JVK595), moto (3 letras, 2 números y 1 letra, ej: ABC12D) o remolque (R o S y 5 números, ej: R12345).</div>
+        <div class="placa-aviso" id="placa-relevo-aviso"></div>
+        <!-- Solo visible con ?debug=1 en la URL (ver mostrarDebugPlaca en Logica.js) -->
+        <div class="placa-debug" id="placa-relevo-debug" style="display:none;"></div>
       </div>
 
       <label class="form-lbl">Tipo de registro</label>

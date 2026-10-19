@@ -63,10 +63,46 @@ const CONDUCTORES_DEFAULT = [
 // aceptaría cualquier combinación de letras y números.
 const REGEX_PLACA = /^([A-Z]{3}[0-9]{3}|[A-Z]{3}[0-9]{2}[A-Z]|[RS][0-9]{5})$/;
 
-// Mayúsculas y sin espacios ni guiones — así el conductor de relevo puede
-// escribir "jvk 595", "jvk595" o "JVK-595" y los tres terminan validando igual.
+// Mismo formato moto de arriba, aislado para poder preguntar "¿esto es
+// específicamente una moto?" sin repetir la alternancia completa (se usa
+// para el aviso de "la última es una letra, no un número").
+const REGEX_PLACA_MOTO = /^[A-Z]{3}[0-9]{2}[A-Z]$/;
+
+// Mayúsculas y quita todo lo que no sea letra A-Z o dígito 0-9: espacios,
+// guiones, NBSP (U+00A0) y los caracteres de ancho cero que algunos
+// teclados Android insertan al autocompletar/corregir (U+200B, U+200C,
+// U+200D, U+FEFF) quedan fuera. Así "jvk 595", "JVK-595" o una placa con
+// basura invisible pegada por el teclado terminan validando igual.
 function normalizarPlaca(valor) {
-  return String(valor || '').toUpperCase().replace(/[\s-]+/g, '');
+  return String(valor || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+// Si la placa normalizada tiene 6 caracteres pero no pasa REGEX_PLACA,
+// intenta corregir O→0 e I/L→1 SOLO en las posiciones que el formato exige
+// que sean dígito — nunca en las que deben ser letra. Primero prueba como
+// si fuera carro (dígito en 3,4,5), luego como si fuera moto (dígito en
+// 3,4; la posición 5 de moto es letra y no se toca). Si ninguna corrección
+// hace que pase la regex, devuelve null. Una placa que YA pasa como está
+// nunca llega aquí (ver validarPlacaRelevo) y por lo tanto nunca se toca.
+function corregirAmbiguosPlaca(normalizada) {
+  if (normalizada.length !== 6 || REGEX_PLACA.test(normalizada)) return null;
+
+  const corregirEn = (str, posicionesDigito) => {
+    const chars = str.split('');
+    posicionesDigito.forEach(i => {
+      if (chars[i] === 'O') chars[i] = '0';
+      else if (chars[i] === 'I' || chars[i] === 'L') chars[i] = '1';
+    });
+    return chars.join('');
+  };
+
+  const comoCarro = corregirEn(normalizada, [3, 4, 5]);
+  if (REGEX_PLACA.test(comoCarro)) return comoCarro;
+
+  const comoMoto = corregirEn(normalizada, [3, 4]);
+  if (REGEX_PLACA.test(comoMoto)) return comoMoto;
+
+  return null;
 }
 
 // ════════════════════════════════════════════════════════
@@ -249,6 +285,8 @@ function entrarConSesion() {
     placaRelevoBox.style.display = 'block';
     placaRelevoInput.value = '';
     document.getElementById('placa-relevo-err').classList.remove('vis');
+    const avisoEl = document.getElementById('placa-relevo-aviso');
+    if (avisoEl) { avisoEl.textContent = ''; avisoEl.classList.remove('vis'); }
   } else {
     placaSel = sesion.placa;
     placaFija.style.display = 'block';
@@ -266,6 +304,8 @@ function cerrarSesion() {
   placaSel = null;
   document.getElementById('placa-relevo-input').value = '';
   document.getElementById('placa-relevo-err').classList.remove('vis');
+  const avisoCierre = document.getElementById('placa-relevo-aviso');
+  if (avisoCierre) { avisoCierre.textContent = ''; avisoCierre.classList.remove('vis'); }
   document.getElementById('tabs-nav').style.display = 'none';
   document.querySelectorAll('.vista').forEach(el => el.classList.remove('activa'));
   document.getElementById('vista-login').classList.add('activa');
@@ -295,41 +335,120 @@ function inicializarBotones() {
   inicializarPlacaRelevo();
 }
 
-// Campo de placa del conductor de relevo (sin placa fija): normaliza lo que
-// escribe (mayúsculas, sin espacios ni guiones) y solo deja placaSel con un
-// valor cuando tiene alguno de los formatos de placa colombiana válidos
-// (carro, moto o remolque — ver REGEX_PLACA). Mientras no sea válido,
-// placaSel queda en null y enviarCheckin() bloquea el registro igual que si
-// no hubiera seleccionado vehículo. Escucha 'input', 'change' y 'blur' para
-// no depender de un solo evento si el valor llega por autocompletado o
-// pegado sin disparar 'input' en algunos navegadores.
-function inicializarPlacaRelevo() {
+// true solo si la URL tiene ?debug=1 — controla si se muestra la caja de
+// diagnóstico de códigos de carácter bajo el campo de placa del relevo.
+function debugActivoPlaca() {
+  try { return new URLSearchParams(window.location.search).get('debug') === '1'; }
+  catch (e) { return false; }
+}
+
+// Pinta (o esconde) la caja de diagnóstico con el código de cada carácter
+// del valor crudo del campo y el valor ya normalizado. Sirve para ver desde
+// el celular qué hay REALMENTE en el campo cuando el teclado mete caracteres
+// invisibles (NBSP, ancho cero) que a simple vista son indistinguibles de
+// "no hay nada ahí". Sin ?debug=1 nunca se muestra.
+function mostrarDebugPlaca(crudo, normalizada) {
+  const debug = document.getElementById('placa-relevo-debug');
+  if (!debug) return;
+  if (!debugActivoPlaca()) {
+    debug.style.display = 'none';
+    debug.textContent = '';
+    return;
+  }
+  const codigos = Array.from(crudo).map(c => c.codePointAt(0)).join(' ') || '(vacío)';
+  debug.textContent = `Crudo: [${codigos}] · Normalizado: "${normalizada}"`;
+  debug.style.display = 'block';
+}
+
+// Único cálculo de validación del campo de placa del relevo — lo usan tanto
+// los listeners de inicializarPlacaRelevo() como enviarCheckin(), para que
+// nunca existan dos lugares con lógica distinta.
+//
+// escribirCampo=false (en 'input'/'keyup'/'compositionend', mientras se
+// está escribiendo): NUNCA toca input.value. Reescribir el campo a mitad de
+// una pulsación es lo que rompía esto en Android/Chrome — el teclado estaba
+// a mitad de insertar/autocorregir un carácter, el campo se reemplazaba por
+// debajo, y el navegador dejaba el campo en un estado donde "JVK031" tecleado
+// correctamente no coincidía con lo que de verdad quedaba en el DOM.
+//
+// escribirCampo=true (en 'change'/'blur'/al enviar): sí reescribe
+// input.value con el valor final (normalizado, o corregido si aplicó
+// corregirAmbiguosPlaca) — ahí ya no hay una pulsación en curso que romper.
+//
+// El error de formato (.gps-err, rojo) solo se enciende si ya hay 6+
+// caracteres normalizados, o si escribirCampo es true (blur/change/enviar):
+// nunca aparece en rojo mientras el usuario va por el carácter 1 al 5.
+function validarPlacaRelevo(escribirCampo) {
   const input = document.getElementById('placa-relevo-input');
   const err = document.getElementById('placa-relevo-err');
+  const aviso = document.getElementById('placa-relevo-aviso');
   if (!input) return;
 
-  const sincronizarPlaca = () => {
-    const normalizada = normalizarPlaca(input.value);
-    input.value = normalizada;
+  const crudo = input.value;
+  const normalizada = normalizarPlaca(crudo);
+  mostrarDebugPlaca(crudo, normalizada);
 
-    if (!normalizada) {
-      placaSel = null;
-      err.classList.remove('vis');
-      return;
+  if (aviso) { aviso.textContent = ''; aviso.classList.remove('vis'); }
+
+  if (!normalizada) {
+    placaSel = null;
+    err.classList.remove('vis');
+    if (escribirCampo) input.value = '';
+    return;
+  }
+
+  if (REGEX_PLACA.test(normalizada)) {
+    // Ya es válida tal cual: nunca se modifica. Si es formato moto y la
+    // última letra es L, I u O (se confunde con 1/1/0), avisa sin bloquear.
+    placaSel = normalizada;
+    err.classList.remove('vis');
+    if (escribirCampo) input.value = normalizada;
+    if (aviso && REGEX_PLACA_MOTO.test(normalizada) && /[LIO]$/.test(normalizada)) {
+      aviso.textContent = 'Verifica: la última es una letra, no un número.';
+      aviso.classList.add('vis');
     }
+    return;
+  }
 
-    if (REGEX_PLACA.test(normalizada)) {
-      placaSel = normalizada;
-      err.classList.remove('vis');
-    } else {
-      placaSel = null;
-      err.classList.add('vis');
+  const corregida = corregirAmbiguosPlaca(normalizada);
+  if (corregida) {
+    placaSel = corregida;
+    err.classList.remove('vis');
+    if (escribirCampo) input.value = corregida;
+    if (aviso) {
+      aviso.textContent = `Corregido a ${corregida} — verifica que sea tu placa.`;
+      aviso.classList.add('vis');
     }
-  };
+    return;
+  }
 
-  input.addEventListener('input', sincronizarPlaca);
-  input.addEventListener('change', sincronizarPlaca);
-  input.addEventListener('blur', sincronizarPlaca);
+  placaSel = null;
+  if (normalizada.length >= 6 || escribirCampo) {
+    err.classList.add('vis');
+  } else {
+    err.classList.remove('vis');
+  }
+}
+
+// Campo de placa del conductor de relevo (sin placa fija): valida en vivo
+// con validarPlacaRelevo() sin tocar el campo mientras se escribe (ver esa
+// función para el porqué), y escucha 'compositionend'/'keyup' además de
+// 'input'/'change'/'blur' para cubrir teclados móviles con composición
+// (autocorrección, predicción) que no siempre disparan 'input' de forma
+// confiable. Ignora 'input' mientras el navegador reporta una composición
+// en curso (event.isComposing) — se valida igual en 'compositionend'.
+function inicializarPlacaRelevo() {
+  const input = document.getElementById('placa-relevo-input');
+  if (!input) return;
+
+  input.addEventListener('input', (e) => {
+    if (e && e.isComposing) return;
+    validarPlacaRelevo(false);
+  });
+  input.addEventListener('compositionend', () => validarPlacaRelevo(false));
+  input.addEventListener('keyup', () => validarPlacaRelevo(false));
+  input.addEventListener('change', () => validarPlacaRelevo(true));
+  input.addEventListener('blur', () => validarPlacaRelevo(true));
 }
 
 // Ajusta visibilidad, etiqueta, placeholder y obligatoriedad del campo "novedad"
@@ -432,17 +551,11 @@ async function enviarCheckin() {
   const nota = document.getElementById('nota').value.trim();
   const novedad = document.getElementById('novedad').value.trim();
 
-  // Recalcula placaSel desde el campo justo antes de validar: si el valor
-  // llegó por autocompletado o pegado sin disparar input/change/blur, esto
-  // evita bloquear el registro con el campo visualmente lleno y válido.
-  if (sesion && sesion.relevo) {
-    const placaInput = document.getElementById('placa-relevo-input');
-    if (placaInput) {
-      const normalizada = normalizarPlaca(placaInput.value);
-      placaInput.value = normalizada;
-      placaSel = REGEX_PLACA.test(normalizada) ? normalizada : null;
-    }
-  }
+  // Recalcula placaSel desde el campo justo antes de validar (mismo cálculo
+  // que usan los listeners de inicializarPlacaRelevo): si el valor llegó
+  // por autocompletado o pegado sin disparar input/change/blur, esto evita
+  // bloquear el registro con el campo visualmente lleno y válido.
+  if (sesion && sesion.relevo) validarPlacaRelevo(true);
 
   if (!conductorSel) { alert('Selecciona el conductor.'); return; }
   if (!placaSel) {
