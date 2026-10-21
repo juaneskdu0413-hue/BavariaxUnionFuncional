@@ -1412,16 +1412,15 @@ function cerrarSesionAdmin() {
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybeK--ANSECbaOHO4sspV3111fnO5ya5xCi5qiqhpx8K_8nI6W1xZloBToZhTDbOkAEQ/exec';
 
 const CONDUCTORES_DEFAULT = [
-  { nombre: 'OSCAR ANDRÉS VÁSQUEZ',          placa: 'JVK595' },
   { nombre: 'DEIBIS RAFAEL PADILLA',         placa: 'JVK142' },
-  { nombre: 'GUSTAVO NIÑO',                  placa: 'JVK031' },
   { nombre: 'OSCAR STIVEN OCHOA PEDREROS',   placa: 'JVK594' },
   { nombre: 'JOSE EDGARDO HERNANDEZ CRUZ',   placa: 'JVK129' },
-  { nombre: 'YESID GUERRERO SERNA',          placa: 'JVK130' },
+  { nombre: 'YESID GUERRERO SERNA',          placa: 'JVK595' },
   // Relevo sin placa fija (ver mismo registro en Logica.js). `relevo: true`
   // hace que conductoresConActividadHoy() lo oculte de las vistas "de hoy"
   // (semáforo, inactivos, resumen) los días que no conduce, en vez de
   // mostrarlo como "Sin registros hoy" en rojo permanentemente.
+  { nombre: 'GUSTAVO NIÑO',                  placa: null, relevo: true },
   { nombre: 'FREDY SANTANA ACUÑA',           placa: null, relevo: true },
   { nombre: 'CESAR ANTONIO CHURQUE LEÓN',    placa: null, relevo: true },
 ];

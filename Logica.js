@@ -41,17 +41,16 @@ const CONDUCTORES_KEY = 'bxua_conductores';
 // Lista de respaldo: se usa solo si no hay nada guardado todavía en localStorage
 // (primera carga, o navegador/dispositivo distinto al que usó el admin).
 const CONDUCTORES_DEFAULT = [
-  { nombre: 'OSCAR ANDRÉS VÁSQUEZ',          cedula: '1015422543', placa: 'JVK595' },
   { nombre: 'DEIBIS RAFAEL PADILLA',         cedula: '8498966',    placa: 'JVK142' },
-  { nombre: 'GUSTAVO NIÑO',                  cedula: '1014184984', placa: 'JVK031' },
   { nombre: 'OSCAR STIVEN OCHOA PEDREROS',   cedula: '1022443892', placa: 'JVK594' },
   { nombre: 'JOSE EDGARDO HERNANDEZ CRUZ',   cedula: '79750999',   placa: 'JVK129' },
-  { nombre: 'YESID GUERRERO SERNA',          cedula: '1051589874', placa: 'JVK130' },
+  { nombre: 'YESID GUERRERO SERNA',          cedula: '1051589874', placa: 'JVK595' },
   // Conductor de relevo: no tiene vehículo fijo asignado, así que `placa` queda
   // en null a propósito. `relevo: true` es lo que hace que el login le muestre
   // un campo de placa editable en vez del texto fijo de los demás (ver
   // entrarConSesion), y que admin.html no lo cuente como "sin registros" los
   // días que no conduce (ver conductoresConActividadHoy en admin.html).
+  { nombre: 'GUSTAVO NIÑO',                  cedula: '1014184984', placa: null, relevo: true },
   { nombre: 'FREDY SANTANA ACUÑA',           cedula: '1024483571', placa: null, relevo: true },
   { nombre: 'CESAR ANTONIO CHURQUE LEÓN',    cedula: '1033707928', placa: null, relevo: true },
 ];
