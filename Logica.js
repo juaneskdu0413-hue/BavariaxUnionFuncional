@@ -44,7 +44,7 @@ const CONDUCTORES_DEFAULT = [
   { nombre: 'DEIBIS RAFAEL PADILLA',         cedula: '8498966',    placa: 'JVK142' },
   { nombre: 'OSCAR STIVEN OCHOA PEDREROS',   cedula: '1022443892', placa: 'JVK594' },
   { nombre: 'JOSE EDGARDO HERNANDEZ CRUZ',   cedula: '79750999',   placa: 'JVK129' },
-  { nombre: 'YESID GUERRERO SERNA',          cedula: '1051589874', placa: 'JVK595' },
+  { nombre: 'JORGE ENRIQUE PINTO PINZON',    cedula: '1033697418', placa: 'JVK595' },
   // Conductor de relevo: no tiene vehículo fijo asignado, así que `placa` queda
   // en null a propósito. `relevo: true` es lo que hace que el login le muestre
   // un campo de placa editable en vez del texto fijo de los demás (ver
@@ -53,6 +53,7 @@ const CONDUCTORES_DEFAULT = [
   { nombre: 'GUSTAVO NIÑO',                  cedula: '1014184984', placa: null, relevo: true },
   { nombre: 'FREDY SANTANA ACUÑA',           cedula: '1024483571', placa: null, relevo: true },
   { nombre: 'CESAR ANTONIO CHURQUE LEÓN',    cedula: '1033707928', placa: null, relevo: true },
+  { nombre: 'JHONATHAN JIMENEZ',             cedula: '1069434269', placa: null, relevo: true },
 ];
 
 // Formatos de placa colombiana que puede traer el vehículo del día del
