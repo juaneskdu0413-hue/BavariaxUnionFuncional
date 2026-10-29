@@ -42,7 +42,7 @@ const CONDUCTORES_KEY = 'bxua_conductores';
 // (primera carga, o navegador/dispositivo distinto al que usó el admin).
 const CONDUCTORES_DEFAULT = [
   { nombre: 'DEIBIS RAFAEL PADILLA',         cedula: '8498966',    placa: 'JVK142' },
-  { nombre: 'OSCAR STIVEN OCHOA PEDREROS',   cedula: '1022443892', placa: 'JVK594' },
+  { nombre: 'YESID GUERRERO SERNA',          cedula: '1051589874', placa: 'JVK594' },
   { nombre: 'JOSE EDGARDO HERNANDEZ CRUZ',   cedula: '79750999',   placa: 'JVK129' },
   { nombre: 'JORGE ENRIQUE PINTO PINZON',    cedula: '1033697418', placa: 'JVK595' },
   // Conductor de relevo: no tiene vehículo fijo asignado, así que `placa` queda
